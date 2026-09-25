@@ -83,8 +83,11 @@ end
 
 -------------------------------------------------
 -- SuperWoW-aware aura search
+-- spellID > 0  : match by spell ID first (more accurate)
+-- spellID == 0 : fall back to name matching (legacy behaviour)
 -------------------------------------------------
-local function find_aura(name, unit, auratype, myCast)
+local function find_aura(name, spellID, unit, auratype, myCast)
+  local useSpellID = spellID and spellID > 0
   local found, foundstacks, foundsid, foundrem, foundtex
   local function search(is_debuff)
     local i = (unit == "Player") and 0 or 1
@@ -100,11 +103,22 @@ local function find_aura(name, unit, auratype, myCast)
         else
           tex, stacks, sid, rem = UnitBuff(unit, i)
         end
-		
+
       end
 
       if not tex then break end
-      if sid and name == SpellInfo(sid) then
+      local matched = false
+      if sid then
+        if useSpellID then
+          matched = (sid == spellID)
+        else
+          local infoName = SpellInfo(sid)
+          if infoName and name and name ~= "" and name == infoName then
+            matched = true
+          end
+        end
+      end
+      if matched then
 		found, foundstacks, foundsid, foundrem, foundtex = 1, stacks, sid, rem, tex
 		local _, unitGUID = UnitExists(unit)
 		if unitGUID then unitGUID = gsub(unitGUID, "^0x", "") end
@@ -137,34 +151,36 @@ end
 -------------------------------------------------
 -- Get Icon / Duration / Stacks (SuperWoW)
 -------------------------------------------------
-function sA:GetSuperAuraInfos(name, unit, auratype, myCast)
+function sA:GetSuperAuraInfos(name, spellID, unit, auratype, myCast)
   if auratype == "Cooldown" then
     local texture, remaining_time = self:GetCooldownInfo(name)
     return _, texture, remaining_time, 1
   end
 
-  local found, stacks, spellID, remaining_time, texture = find_aura(name, unit, auratype, myCast)
+  local found, stacks, foundSpellID, remaining_time, texture = find_aura(name, spellID, unit, auratype, myCast)
   if not found then return end
 
   -- Fallback for missing remaining_time
-  if (not remaining_time or remaining_time == 0) and spellID and sA.auraTimers then
+  if (not remaining_time or remaining_time == 0) and foundSpellID and sA.auraTimers then
     local _, unitGUID = UnitExists(unit)
     if unitGUID then
       unitGUID = gsub(unitGUID, "^0x", "")
       local timers = sA.auraTimers[unitGUID]
-      if timers and timers[spellID] and timers[spellID].duration then
-        local expiry = timers[spellID].duration
+      if timers and timers[foundSpellID] and timers[foundSpellID].duration then
+        local expiry = timers[foundSpellID].duration
         remaining_time = (expiry > GetTime()) and (expiry - GetTime()) or 0
       end
     end
   end
-  return spellID, texture, remaining_time, stacks
+  return foundSpellID, texture, remaining_time, stacks
 end
 
 -------------------------------------------------
 -- Tooltip-based aura info (no SuperWoW)
+-- spellID parameter accepted for API parity with GetSuperAuraInfos,
+-- but ignored: vanilla 1.12 UnitBuff/UnitDebuff does not return spell IDs.
 -------------------------------------------------
-function sA:GetAuraInfos(auraname, unit, auratype)
+function sA:GetAuraInfos(auraname, spellID, unit, auratype)
   if auratype == "Cooldown" then
     local texture, remaining_time = self:GetCooldownInfo(auraname)
     return texture, remaining_time, 1
@@ -349,9 +365,9 @@ function sA:UpdateAuras()
           if targetCheckPassed then
             -- Get aura data (icon indicates presence)
             if sA.SuperWoW then
-                spellID, icon, duration, stacks = self:GetSuperAuraInfos(aura.name, aura.unit, aura.type, aura.myCast)
+                spellID, icon, duration, stacks = self:GetSuperAuraInfos(aura.name, aura.spellID, aura.unit, aura.type, aura.myCast)
             else
-                icon, duration, stacks = self:GetAuraInfos(aura.name, aura.unit, aura.type)
+                icon, duration, stacks = self:GetAuraInfos(aura.name, aura.spellID, aura.unit, aura.type)
             end
             
             local auraIsPresent = icon and 1 or 0
@@ -382,9 +398,9 @@ function sA:UpdateAuras()
         if not (icon or aura.name) then -- Data might not have been fetched in /sa mode
 		  spellID = nil
           if sA.SuperWoW then
-            spellID, icon, duration, stacks = self:GetSuperAuraInfos(aura.name, aura.unit, aura.type)
+            spellID, icon, duration, stacks = self:GetSuperAuraInfos(aura.name, aura.spellID, aura.unit, aura.type, aura.myCast)
           else
-            icon, duration, stacks = self:GetAuraInfos(aura.name, aura.unit, aura.type)
+            icon, duration, stacks = self:GetAuraInfos(aura.name, aura.spellID, aura.unit, aura.type)
           end
         end
 

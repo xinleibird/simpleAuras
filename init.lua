@@ -61,10 +61,17 @@ local function GetAuraDurationBySpellID(spellID, casterGUID)
   return simpleAuras.auradurations[spellID][casterGUID]
 end
 
-local function getAuraID(spellName)
+local function getAuraID(spellID, spellName)
     local auraFound = {}
+    local useSpellID = spellID and spellID > 0
     for auraID, aura in ipairs(simpleAuras.auras) do
-        if aura.name == spellName then
+        local matched
+        if useSpellID then
+            matched = (aura.spellID and aura.spellID > 0 and aura.spellID == spellID)
+        else
+            matched = (aura.name == spellName)
+        end
+        if matched then
             table.insert(auraFound, auraID)
         end
     end
@@ -135,7 +142,7 @@ if sA.SuperWoW then
       if evType ~= "CAST" or not spellID then return end
 	  
       local spellName = SpellInfo(spellID)
-	  local auraIDs = getAuraID(spellName)
+	  local auraIDs = getAuraID(spellID, spellName)
 
 	  if ((auraIDs and getn(auraIDs) > 0) or simpleAuras.learnall == 1) and spellID then
 

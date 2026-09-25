@@ -63,6 +63,9 @@ My Casts only*:
 Aura/Spellname Name:
 - Name of the aura to track (has to be exactly the same name)
 
+Spell ID:
+- *Optional.* Numeric spell ID of the aura. When set (>0), matching prioritizes Spell ID over Name, so auras with the same name but different IDs can be distinguished. Falls back to Name matching when the Spell ID is not found. Without SuperWoW this field is ignored.
+
 
 Icon/Texture:
 - Color: Basecolor of the aura.

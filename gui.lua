@@ -364,6 +364,7 @@ function sA:SaveAura(id)
   if not ed then return end
   local data = simpleAuras.auras[id]
   data.name            = ed.name:GetText()
+  data.spellID         = tonumber(ed.spellID:GetText()) or 0
   data.enabled         = ed.enabled.value
   if sA.SuperWoW then
 	data.myCast          = ed.myCast.value
@@ -412,7 +413,7 @@ function sA:AddAura(copyId)
   if copyId and simpleAuras.auras[copyId] then
     simpleAuras.auras[newId] = deepCopy(simpleAuras.auras[copyId])
   else
-    simpleAuras.auras[newId] = {["enabled"]=1,["myCast"]=1,["name"]="",["auracolor"]={[1]=1,[2]=1,[3]=1,[4]=1},["autodetect"]=0,["texture"]="Interface\\Icons\\INV_Misc_QuestionMark",["scale"]=1,["xpos"]=0,["ypos"]=0,["duration"]=0,["stacks"]=0,["type"]="Buff",["unit"]="Player",["showCD"]="Always",["lowduration"]=0,["lowdurationcolor"]={[1]=1,[2]=0,[3]=0,[4]=1},["lowdurationvalue"]=5,["inCombat"]=1,["outCombat"]=1,["inParty"]=0,["inRaid"]=0,["invert"]=0,["dual"]=0}
+    simpleAuras.auras[newId] = {["enabled"]=1,["myCast"]=1,["name"]="",["spellID"]=0,["auracolor"]={[1]=1,[2]=1,[3]=1,[4]=1},["autodetect"]=0,["texture"]="Interface\\Icons\\INV_Misc_QuestionMark",["scale"]=1,["xpos"]=0,["ypos"]=0,["duration"]=0,["stacks"]=0,["type"]="Buff",["unit"]="Player",["showCD"]="Always",["lowduration"]=0,["lowdurationcolor"]={[1]=1,[2]=0,[3]=0,[4]=1},["lowdurationvalue"]=5,["inCombat"]=1,["outCombat"]=1,["inParty"]=0,["inRaid"]=0,["invert"]=0,["dual"]=0}
   end
   if gui.editor and gui.editor:IsShown() then
     gui.editor:Hide()
@@ -504,7 +505,7 @@ function sA:EditAura(id)
     ed.nameLabel:SetText("Aura Name:")
     ed.name = CreateFrame("EditBox", nil, ed)
     ed.name:SetPoint("LEFT", ed.nameLabel, "RIGHT", 5, 0)
-    ed.name:SetWidth(198)
+    ed.name:SetWidth(120)
     ed.name:SetHeight(20)
     ed.name:SetMultiLine(false)
     ed.name:SetAutoFocus(false)
@@ -517,6 +518,26 @@ function sA:EditAura(id)
     ed.name:SetBackdropColor(0.1, 0.1, 0.1, 1)
     ed.name:SetBackdropBorderColor(0, 0, 0, 1)
     ed.name:SetScript("OnEnterPressed", function() sA:SaveAura(id) end)
+
+    -- Spell ID (optional; when >0, aura is matched by spell ID first)
+    ed.spellIDLabel = ed:CreateFontString(nil, "OVERLAY", "GameFontNormal")
+    ed.spellIDLabel:SetPoint("LEFT", ed.name, "RIGHT", 8, 0)
+    ed.spellIDLabel:SetText("ID:")
+    ed.spellID = CreateFrame("EditBox", nil, ed)
+    ed.spellID:SetPoint("LEFT", ed.spellIDLabel, "RIGHT", 5, 0)
+    ed.spellID:SetWidth(60)
+    ed.spellID:SetHeight(20)
+    ed.spellID:SetMultiLine(false)
+    ed.spellID:SetAutoFocus(false)
+    ed.spellID:SetFontObject(GameFontHighlightSmall)
+    ed.spellID:SetTextColor(1, 1, 1)
+    ed.spellID:SetMaxLetters(10)
+    ed.spellID:SetTextInsets(4, 4, 4, 4)
+    ed.spellID:SetJustifyH("CENTER")
+    ed.spellID:SetBackdrop({ bgFile = "Interface\\Buttons\\WHITE8x8", edgeFile = "Interface\\Buttons\\WHITE8x8", edgeSize = 1 })
+    ed.spellID:SetBackdropColor(0.1, 0.1, 0.1, 1)
+    ed.spellID:SetBackdropBorderColor(0, 0, 0, 1)
+    ed.spellID:SetScript("OnEnterPressed", function() sA:SaveAura(id) end)
 
     -- Separator
     local lineone = ed:CreateTexture(nil, "OVERLAY")
@@ -1108,7 +1129,12 @@ function sA:EditAura(id)
   end
 
   -- Populate fields with aura values
-  ed.title:SetText("[" .. tostring(id) .. "] " .. (aura.name ~= "" and aura.name or "<unnamed>"))
+  local titleName = (aura.name ~= "" and aura.name) or "<unnamed>"
+  local titleSuffix = ""
+  if aura.spellID and aura.spellID > 0 then
+    titleSuffix = " (ID:" .. tostring(aura.spellID) .. ")"
+  end
+  ed.title:SetText("[" .. tostring(id) .. "] " .. titleName .. titleSuffix)
   ed.enabled.value = aura.enabled or 1
   if ed.enabled.value == 1 then ed.enabled.checked:Show() else ed.enabled.checked:Hide() end
   if ed.myCast then
@@ -1116,6 +1142,7 @@ function sA:EditAura(id)
 	  if ed.myCast.value == 1 then ed.myCast.checked:Show() else ed.myCast.checked:Hide() end
   end
   ed.name:SetText(aura.name or "")
+  ed.spellID:SetText((aura.spellID and aura.spellID > 0) and tostring(aura.spellID) or "")
   ed.auracolor = aura.auracolor or {1,1,1,1}
   ed.auracolorpicker = ed.auracolorpicker -- ensure exists
   ed.auracolorpicker.prev:SetTexture(unpack(ed.auracolor))
