@@ -99,6 +99,9 @@ Distance:
   - **BehindInRange** — both Behind and InRange. Requires `UnitXP`.
   - **FrontInRange** — both Front and InRange. Requires `UnitXP`.
 - The Aura Name (and/or Spell ID) is used as the spell argument for `IsSpellInRange`.
+- Target condition (checkboxes in the Conditions area, Distance type only):
+  - **Friendly / Hostile / Self** — when any is checked, a target must exist and match at least one checked relation (`UnitIsFriend` / `UnitCanAttack` / `UnitIsUnit`). All unchecked = no gate.
+  - **Alive / Dead** — show only when the target is alive or dead (mutually exclusive).
 - When `UnitXP` is unavailable, Behind/Front conditions never show (conservative).
 - When `IsSpellInRange` returns nil for an unknown spell, the condition is treated as "in range".
 - Dual is not available for Distance auras.

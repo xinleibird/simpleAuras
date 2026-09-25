@@ -150,6 +150,49 @@ local function find_aura(name, spellID, unit, auratype, myCast)
 end
 
 -------------------------------------------------
+-- Target condition evaluation (DoiteAuras-style)
+--   Friendly/Hostile/Self: relation gate; when any is checked a target
+--     must exist and match at least one selected relation.
+--   Alive/Dead: status gate; UI keeps them exclusive, both set is a no-op.
+-------------------------------------------------
+function sA:TargetConditionPasses(aura)
+  local wantHelp = aura.targetHelp == 1
+  local wantHarm = aura.targetHarm == 1
+  local wantSelf = aura.targetSelf == 1
+  local wantAlive = aura.targetAlive == 1
+  local wantDead = aura.targetDead == 1
+
+  if not (wantHelp or wantHarm or wantSelf or wantAlive or wantDead) then
+    return true
+  end
+
+  if not UnitExists("target") then return false end
+
+  -- Relation gate
+  if wantHelp or wantHarm or wantSelf then
+    local isSelf = UnitIsUnit("player", "target") and true or false
+    local isFriend = UnitIsFriend("player", "target") and true or false
+    local canAttack = UnitCanAttack("player", "target") and true or false
+    local ok = false
+    if wantSelf and isSelf then ok = true end
+    if not ok and wantHelp and isFriend and (not isSelf) then ok = true end
+    if not ok and wantHarm and canAttack and (not isFriend) then ok = true end
+    if not ok then return false end
+  end
+
+  -- Status gate
+  if wantAlive and wantDead then
+    return true
+  elseif wantAlive or wantDead then
+    local isDead = (UnitIsDead and UnitIsDead("target") == 1) and true or false
+    if wantAlive then return not isDead end
+    return isDead
+  end
+
+  return true
+end
+
+-------------------------------------------------
 -- Distance condition evaluation (targetDistance-style)
 -- Mirrors DoiteAuras' 7-value condition. Behaves conservatively:
 --   - Behind/Front/BehindInRange/FrontInRange require UnitXP (SP3/Nampower);
@@ -435,7 +478,8 @@ function sA:UpdateAuras()
         if conditionsMet then
           if aura.type == "Distance" then
             -- Distance type: independent path, requires a current target
-            if hasTarget then
+            -- and a passing target condition (Friendly/Hostile/Self, Alive/Dead)
+            if hasTarget and self:TargetConditionPasses(aura) then
               local passes = self:DistanceConditionPasses(
                 aura.showDistance or aura.distanceCondition,
                 aura.name, aura.spellID)

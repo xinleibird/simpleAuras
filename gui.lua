@@ -400,6 +400,13 @@ function sA:SaveAura(id)
   data.inParty         = ed.inParty.value
   data.invert          = ed.invert.value
   data.dual            = ed.dual.value
+  if ed.targetHelp then
+    data.targetHelp    = ed.targetHelp.value
+    data.targetHarm    = ed.targetHarm.value
+    data.targetSelf    = ed.targetSelf.value
+    data.targetAlive   = ed.targetAlive.value
+    data.targetDead    = ed.targetDead.value
+  end
 
   ed.name:ClearFocus()
   ed.texturePath:ClearFocus()
@@ -424,7 +431,7 @@ function sA:AddAura(copyId)
   if copyId and simpleAuras.auras[copyId] then
     simpleAuras.auras[newId] = deepCopy(simpleAuras.auras[copyId])
   else
-    simpleAuras.auras[newId] = {["enabled"]=1,["myCast"]=1,["name"]="",["spellID"]=0,["auracolor"]={[1]=1,[2]=1,[3]=1,[4]=1},["autodetect"]=0,["texture"]="Interface\\Icons\\INV_Misc_QuestionMark",["scale"]=1,["xpos"]=0,["ypos"]=0,["duration"]=0,["stacks"]=0,["type"]="Buff",["unit"]="Player",["showCD"]="Always",["showDistance"]="Any",["distanceCondition"]="Any",["lowduration"]=0,["lowdurationcolor"]={[1]=1,[2]=0,[3]=0,[4]=1},["lowdurationvalue"]=5,["inCombat"]=1,["outCombat"]=1,["inParty"]=0,["inRaid"]=0,["invert"]=0,["dual"]=0}
+    simpleAuras.auras[newId] = {["enabled"]=1,["myCast"]=1,["name"]="",["spellID"]=0,["auracolor"]={[1]=1,[2]=1,[3]=1,[4]=1},["autodetect"]=0,["texture"]="Interface\\Icons\\INV_Misc_QuestionMark",["scale"]=1,["xpos"]=0,["ypos"]=0,["duration"]=0,["stacks"]=0,["type"]="Buff",["unit"]="Player",["showCD"]="Always",["showDistance"]="Any",["distanceCondition"]="Any",["lowduration"]=0,["lowdurationcolor"]={[1]=1,[2]=0,[3]=0,[4]=1},["lowdurationvalue"]=5,["inCombat"]=1,["outCombat"]=1,["inParty"]=0,["inRaid"]=0,["invert"]=0,["dual"]=0,["targetHelp"]=0,["targetHarm"]=0,["targetSelf"]=0,["targetAlive"]=0,["targetDead"]=0}
   end
   if gui.editor and gui.editor:IsShown() then
     gui.editor:Hide()
@@ -444,6 +451,13 @@ function sA:EditAura(id)
   sA.TestAura:SetMovable(false)
 
   local ed = gui.editor
+  if ed then
+    -- always rebuild so type-dependent control visibility starts fresh
+    -- (guards the import path, which calls EditAura while an editor is open)
+    ed:Hide()
+    gui.editor = nil
+    ed = nil
+  end
   if not ed then
     ed = CreateFrame("Frame", "sAEdit", gui)
     ed:SetWidth(300)
@@ -1087,6 +1101,60 @@ function sA:EditAura(id)
     ed.inraidLabel:SetPoint("LEFT", ed.inRaid, "RIGHT", 5, 1)
     ed.inraidLabel:SetText("In Raid")
 
+    -- Target condition checkboxes (Distance type only):
+    -- row 3: Friendly / Hostile / Self  (Doite "目标条件")
+    -- row 4: Alive / Dead               (Doite "目标状态", mutually exclusive)
+    local targetCheckKeys = { "targetHelp", "targetHarm", "targetSelf", "targetAlive", "targetDead" }
+    ed.targetCheckKeys = targetCheckKeys
+
+    local function makeTargetCheck(key, text)
+      local cb = CreateFrame("Button", nil, ed)
+      cb:SetWidth(16)
+      cb:SetHeight(16)
+      sA:SkinFrame(cb, {0.15,0.15,0.15,1})
+      cb:SetScript("OnEnter", function() cb:SetBackdropColor(0.5,0.5,0.5,1) end)
+      cb:SetScript("OnLeave", function() cb:SetBackdropColor(0.15,0.15,0.15,1) end)
+      cb.checked = cb:CreateTexture(nil, "OVERLAY")
+      cb.checked:SetTexture("Interface\\Buttons\\WHITE8x8")
+      cb.checked:SetVertexColor(1, 0.8, 0.06, 1)
+      cb.checked:SetPoint("CENTER", cb, "CENTER", 0, 0)
+      cb.checked:SetWidth(7)
+      cb.checked:SetHeight(7)
+      cb.value = 0
+      cb:SetScript("OnClick", function(self)
+        cb.value = 1 - (cb.value or 0)
+        if cb.value == 1 then cb.checked:Show() else cb.checked:Hide() end
+        -- Alive / Dead are mutually exclusive
+        if cb.value == 1 and key == "targetAlive" and ed.targetDead then
+          ed.targetDead.value = 0
+          ed.targetDead.checked:Hide()
+        elseif cb.value == 1 and key == "targetDead" and ed.targetAlive then
+          ed.targetAlive.value = 0
+          ed.targetAlive.checked:Hide()
+        end
+        sA:SaveAura(id)
+      end)
+      ed[key] = cb
+      cb.label = ed:CreateFontString(nil, "OVERLAY", "GameFontNormal")
+      cb.label:SetPoint("LEFT", cb, "RIGHT", 5, 1)
+      cb.label:SetText(text)
+      cb:Hide()
+      cb.label:Hide()
+      return cb
+    end
+
+    local tHelp  = makeTargetCheck("targetHelp",  "Friendly")
+    local tHarm  = makeTargetCheck("targetHarm",  "Hostile")
+    local tSelf  = makeTargetCheck("targetSelf",  "Self")
+    local tAlive = makeTargetCheck("targetAlive", "Alive")
+    local tDead  = makeTargetCheck("targetDead",  "Dead")
+
+    tHelp:SetPoint("TOPLEFT", ed.inParty, "BOTTOMLEFT", 0, -15)
+    tHarm:SetPoint("LEFT", tHelp.label, "RIGHT", 12, -1)
+    tSelf:SetPoint("LEFT", tHarm.label, "RIGHT", 12, -1)
+    tAlive:SetPoint("TOPLEFT", tHelp, "BOTTOMLEFT", 0, -15)
+    tDead:SetPoint("LEFT", tAlive.label, "RIGHT", 12, -1)
+
     -- Invert / Dual
     ed.invert = CreateFrame("Button", nil, ed)
     ed.invert:SetWidth(16)
@@ -1157,6 +1225,10 @@ function sA:EditAura(id)
 		ed.stacksLabel:Hide()
 		ed.showCD:Hide()
 		ed.showDistance:Show()
+		for _, key in ipairs(ed.targetCheckKeys) do
+			ed[key]:Show()
+			ed[key].label:Show()
+		end
 	end
 
     -- Delete / Close / Copy buttons
@@ -1269,6 +1341,12 @@ function sA:EditAura(id)
   if ed.invert.value == 1 then ed.invert.checked:Show() else ed.invert.checked:Hide() end
   ed.dual.value = aura.dual or 0
   if ed.dual.value == 1 then ed.dual.checked:Show() else ed.dual.checked:Hide() end
+  if ed.targetHelp then
+    for _, key in ipairs(ed.targetCheckKeys) do
+      ed[key].value = aura[key] or 0
+      if ed[key].value == 1 then ed[key].checked:Show() else ed[key].checked:Hide() end
+    end
+  end
 
   ed.export:SetScript("OnClick", function() sA:ExportSingleAura(id) end)
 
