@@ -189,6 +189,13 @@ function sA:RefreshAuraList()
 
   if not simpleAuras or not simpleAuras.auras then return end
 
+  -- grow main frame to fit all rows: top offset 30 + 25px per row + 10px padding
+  local need = 30 + table.getn(simpleAuras.auras) * 25 + 10
+  local maxH = (UIParent:GetHeight() or 900) - 40
+  local h = need > 450 and need or 450
+  if h > maxH then h = maxH end
+  gui:SetHeight(h)
+
   for i, aura in ipairs(simpleAuras.auras) do
     local id = i
     local row = CreateFrame("Button", nil, gui)
