@@ -80,7 +80,7 @@ Conditions:
 - Unit: Which unit the aura is on.
 - Type: is it a buff or a debuff.
 - Low Duration Color*: If the auracolor should change at or below "lowduration"
-- Low Duration in secs*: Allways active, changes durationcolor to red if at or below, also changes color if activated.
+- Low Duration in secs*: When the duration is at or below this many seconds, **and "Low Duration Color" is enabled**, the duration text uses 1-decimal format and the text color turns red. When "Low Duration Color" is disabled, the duration text uses integer seconds regardless.
 - In/Out of Combat: When aura should be shown
 - In Raid / In Party: Restricts the aura to only be active when you are in a raid or party (but not a raid).
 
