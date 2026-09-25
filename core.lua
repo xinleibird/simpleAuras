@@ -463,7 +463,11 @@ function sA:UpdateAuras()
 
         local durationcolor = {1.0, 0.82, 0.0, alpha}
         local stackcolor    = {1, 1, 1, alpha}
-        if (sA.SuperWoW or aura.unit == "Player" or aura.type == "Cooldown") and (currentDuration and currentDuration <= (aura.lowdurationvalue or 5)) and currentDurationtext ~= "learning" then
+        if aura.lowduration == 1
+           and (sA.SuperWoW or aura.unit == "Player" or aura.type == "Cooldown")
+           and currentDuration
+           and currentDuration <= (aura.lowdurationvalue or 5)
+           and currentDurationtext ~= "learning" then
           durationcolor = {1, 0, 0, alpha}
         end
         frame.durationtext:SetTextColor(unpack(durationcolor))
