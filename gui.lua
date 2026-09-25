@@ -383,6 +383,10 @@ function sA:SaveAura(id)
   data.type            = ed.typeButton.text:GetText()
   data.unit            = ed.unitButton.text:GetText()
   data.showCD          = ed.showCD.text:GetText()
+  if ed.showDistance then
+    data.showDistance     = ed.showDistance.text:GetText()
+    data.distanceCondition= ed.showDistance.text:GetText()
+  end
   data.inCombat        = ed.inCombat.value
   data.outCombat       = ed.outCombat.value
   data.inRaid          = ed.inRaid.value
@@ -413,7 +417,7 @@ function sA:AddAura(copyId)
   if copyId and simpleAuras.auras[copyId] then
     simpleAuras.auras[newId] = deepCopy(simpleAuras.auras[copyId])
   else
-    simpleAuras.auras[newId] = {["enabled"]=1,["myCast"]=1,["name"]="",["spellID"]=0,["auracolor"]={[1]=1,[2]=1,[3]=1,[4]=1},["autodetect"]=0,["texture"]="Interface\\Icons\\INV_Misc_QuestionMark",["scale"]=1,["xpos"]=0,["ypos"]=0,["duration"]=0,["stacks"]=0,["type"]="Buff",["unit"]="Player",["showCD"]="Always",["lowduration"]=0,["lowdurationcolor"]={[1]=1,[2]=0,[3]=0,[4]=1},["lowdurationvalue"]=5,["inCombat"]=1,["outCombat"]=1,["inParty"]=0,["inRaid"]=0,["invert"]=0,["dual"]=0}
+    simpleAuras.auras[newId] = {["enabled"]=1,["myCast"]=1,["name"]="",["spellID"]=0,["auracolor"]={[1]=1,[2]=1,[3]=1,[4]=1},["autodetect"]=0,["texture"]="Interface\\Icons\\INV_Misc_QuestionMark",["scale"]=1,["xpos"]=0,["ypos"]=0,["duration"]=0,["stacks"]=0,["type"]="Buff",["unit"]="Player",["showCD"]="Always",["showDistance"]="Any",["distanceCondition"]="Any",["lowduration"]=0,["lowdurationcolor"]={[1]=1,[2]=0,[3]=0,[4]=1},["lowdurationvalue"]=5,["inCombat"]=1,["outCombat"]=1,["inParty"]=0,["inRaid"]=0,["invert"]=0,["dual"]=0}
   end
   if gui.editor and gui.editor:IsShown() then
     gui.editor:Hide()
@@ -768,6 +772,7 @@ function sA:EditAura(id)
         makeChoice("Buff", 1)
         makeChoice("Debuff", 2)
         makeChoice("Cooldown", 3)
+        makeChoice("Distance", 4)
       end
       local menu = ed.typeButton.menu
       if menu:IsVisible() then menu:Hide() else menu:Show() end
@@ -869,6 +874,59 @@ function sA:EditAura(id)
 	  if menu:IsVisible() then menu:Hide() else menu:Show() end
 	end)
 	ed.showCD:Hide()
+
+	-- Distance option (used when type == "Distance")
+	ed.showDistance = CreateFrame("Button", nil, ed)
+	ed.showDistance:SetWidth(95)
+	ed.showDistance:SetHeight(20)
+	ed.showDistance:SetPoint("LEFT", ed.typeButton, "RIGHT", 62, 0)
+	sA:SkinFrame(ed.showDistance, {0.2,0.2,0.2,1})
+	ed.showDistance.text = ed.showDistance:CreateFontString(nil, "OVERLAY", "GameFontNormal")
+	ed.showDistance.text:SetPoint("CENTER", ed.showDistance, "CENTER", 0, 0)
+	ed.showDistance:SetScript("OnEnter", function() ed.showDistance:SetBackdropColor(0.5,0.5,0.5,1) end)
+	ed.showDistance:SetScript("OnLeave", function() ed.showDistance:SetBackdropColor(0.2,0.2,0.2,1) end)
+	ed.showDistance:SetScript("OnClick", function(self)
+	  if not ed.showDistance.menu then
+		local menu = CreateFrame("Frame", nil, ed)
+		menu:SetPoint("TOPLEFT", ed.showDistance, "BOTTOMLEFT", 0, -2)
+		menu:SetFrameStrata("DIALOG")
+		menu:SetFrameLevel(10)
+		menu:SetWidth(95)
+		menu:SetHeight(140)
+		sA:SkinFrame(menu, {0.15,0.15,0.15,1})
+		menu:Hide()
+		ed.showDistance.menu = menu
+		local function makeChoice(text, index)
+		  local b = CreateFrame("Button", nil, menu)
+		  b:SetWidth(95)
+		  b:SetHeight(20)
+		  b:SetPoint("TOPLEFT", menu, "TOPLEFT", 0, -((index - 1) * 20))
+		  sA:SkinFrame(b, {0.2,0.2,0.2,1})
+		  b.text = b:CreateFontString(nil, "OVERLAY", "GameFontWhite")
+		  b.text:SetPoint("CENTER", b, "CENTER", 0, 0)
+		  b.text:SetText(text)
+		  b:SetScript("OnEnter", function() b:SetBackdropColor(0.5,0.5,0.5,1) end)
+		  b:SetScript("OnLeave", function() b:SetBackdropColor(0.2,0.2,0.2,1) end)
+		  b:SetScript("OnClick", function()
+			ed.showDistance.text:SetText(text)
+			aura.showDistance = text
+			aura.distanceCondition = text
+			menu:Hide()
+			sA:SaveAura(id)
+		  end)
+		end
+		makeChoice("Any",            1)
+		makeChoice("InRange",        2)
+		makeChoice("OutOfRange",     3)
+		makeChoice("Behind",         4)
+		makeChoice("Front",          5)
+		makeChoice("BehindInRange",  6)
+		makeChoice("FrontInRange",   7)
+	  end
+	  local menu = ed.showDistance.menu
+	  if menu:IsVisible() then menu:Hide() else menu:Show() end
+	end)
+	ed.showDistance:Hide()
 
     -- Low duration options
     ed.lowduration = CreateFrame("Button", nil, ed)
@@ -1077,6 +1135,21 @@ function sA:EditAura(id)
 		ed.dual:Hide()
 		ed.dualLabel:Hide()
 		ed.showCD:Show()
+	elseif aura.type == "Distance" then
+		ed.myCast:Hide()
+		ed.myCastLabel:Hide()
+		ed.unitLabel:Hide()
+		ed.unitButton:Hide()
+		ed.invert:Hide()
+		ed.invertLabel:Hide()
+		ed.dual:Hide()
+		ed.dualLabel:Hide()
+		ed.duration:Hide()
+		ed.durationLabel:Hide()
+		ed.stacks:Hide()
+		ed.stacksLabel:Hide()
+		ed.showCD:Hide()
+		ed.showDistance:Show()
 	end
 
     -- Delete / Close / Copy buttons
@@ -1174,6 +1247,9 @@ function sA:EditAura(id)
   if ed.showCD then
 	ed.showCD.text:SetText(aura.showCD or "Always")
   end
+  if ed.showDistance then
+    ed.showDistance.text:SetText(aura.showDistance or aura.distanceCondition or "Any")
+  end
   ed.inCombat.value = aura.inCombat or 0
   if ed.inCombat.value == 1 then ed.inCombat.checked:Show() else ed.inCombat.checked:Hide() end
   ed.outCombat.value = aura.outCombat or 0
@@ -1209,7 +1285,7 @@ function sA:EditAura(id)
 	  
   sA.TestAura:Show()
   
-  if aura.dual == 1 and aura.type ~= "Cooldown" then
+  if aura.dual == 1 and aura.type ~= "Cooldown" and aura.type ~= "Distance" then
     sA.TestAuraDual:SetPoint("CENTER", UIParent, "CENTER", -(aura.xpos or 0), aura.ypos or 0)
     sA.TestAuraDual:SetWidth(48*(aura.scale or 1))
     sA.TestAuraDual:SetHeight(48*(aura.scale or 1))

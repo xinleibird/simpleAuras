@@ -78,7 +78,7 @@ Icon/Texture:
 
 Conditions:
 - Unit: Which unit the aura is on.
-- Type: is it a buff or a debuff.
+- Type: is it a buff, debuff, cooldown, or distance-to-target.
 - Low Duration Color*: If the auracolor should change at or below "lowduration"
 - Low Duration in secs*: When the duration is at or below this many seconds, **and "Low Duration Color" is enabled**, the duration text uses 1-decimal format and the text color turns red. When "Low Duration Color" is disabled, the duration text uses integer seconds regardless.
 - In/Out of Combat: When aura should be shown
@@ -87,6 +87,21 @@ Conditions:
 Buff/Debuff:
 - Invert: Activate to show aura if not found.
 - Dual: Mirrors the aura (if xpos = -150, then it will show a mirrored icon/texture at xpos 150).
+
+Distance:
+- Shows an icon when the current target matches the configured condition. Requires a target to exist.
+- Condition (drop-down):
+  - **Any** — show whenever a target exists.
+  - **InRange** — show when the spell is in range of the target (`IsSpellInRange`).
+  - **OutOfRange** — show when the spell is **not** in range.
+  - **Behind** — show when the target is behind the player. Requires `UnitXP` (UnitXP_SP3 or Nampower).
+  - **Front** — show when the target is in front of the player. Requires `UnitXP`.
+  - **BehindInRange** — both Behind and InRange. Requires `UnitXP`.
+  - **FrontInRange** — both Front and InRange. Requires `UnitXP`.
+- The Aura Name (and/or Spell ID) is used as the spell argument for `IsSpellInRange`.
+- When `UnitXP` is unavailable, Behind/Front conditions never show (conservative).
+- When `IsSpellInRange` returns nil for an unknown spell, the condition is treated as "in range".
+- Dual is not available for Distance auras.
 
 Cooldown:
 - Always: Shows Cooldown Icon if it's on CD or not.

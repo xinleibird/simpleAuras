@@ -183,7 +183,9 @@ if sA.SuperWoW then
 			sA.auraTimers[targetGUID][spellID].castby = casterGUID
 									
 			for _, auraID in ipairs(auraIDs) do
-				if simpleAuras.auras[auraID].unit ~= "Player" and simpleAuras.auras[auraID].type ~= "Cooldown" then
+				if simpleAuras.auras[auraID].unit ~= "Player"
+				 and simpleAuras.auras[auraID].type ~= "Cooldown"
+				 and simpleAuras.auras[auraID].type ~= "Distance" then
 					showLearn = true
 					break
 				end

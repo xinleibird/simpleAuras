@@ -87,6 +87,7 @@ end
 -- spellID == 0 : fall back to name matching (legacy behaviour)
 -------------------------------------------------
 local function find_aura(name, spellID, unit, auratype, myCast)
+  if auratype == "Distance" then return false end
   local useSpellID = spellID and spellID > 0
   local found, foundstacks, foundsid, foundrem, foundtex
   local function search(is_debuff)
@@ -146,6 +147,79 @@ local function find_aura(name, spellID, unit, auratype, myCast)
   end
   
   return was_found, s, sid, rem, tex
+end
+
+-------------------------------------------------
+-- Distance condition evaluation (targetDistance-style)
+-- Mirrors DoiteAuras' 7-value condition. Behaves conservatively:
+--   - Behind/Front/BehindInRange/FrontInRange require UnitXP (SP3/Nampower);
+--     when UnitXP is unavailable, do NOT show.
+--   - InRange/OutOfRange use IsSpellInRange; nil result is treated as in-range
+--     (matches Doite's lenient behaviour).
+--   - Any / nil / unknown condition always passes.
+-------------------------------------------------
+function sA:DistanceConditionPasses(condition, name, spellID)
+  if not condition or condition == "" or condition == "Any" then
+    return true
+  end
+
+  local wantBehind, wantInRange
+  if     condition == "InRange"      then wantInRange = true
+  elseif condition == "OutOfRange"   then wantInRange = false
+  elseif condition == "Behind"       then wantBehind  = true
+  elseif condition == "Front"        then wantBehind  = false
+  elseif condition == "BehindInRange"then wantBehind  = true;  wantInRange = true
+  elseif condition == "FrontInRange" then wantBehind  = false; wantInRange = true
+  else return true end
+
+  local hasUnitXP = (type(UnitXP) == "function")
+
+  -- Behind/Front requires UnitXP; if unavailable, do not show (per spec)
+  if wantBehind ~= nil and not hasUnitXP then
+    return false
+  end
+
+  -- Behind / Front check
+  local behindOK = true
+  if wantBehind ~= nil then
+    if wantBehind then
+      local ok, behind = pcall(UnitXP, "behind", "player", "target")
+      behindOK = ok and (behind == true)
+    else
+      -- Front: not behind AND in sight
+      local okB, behind   = pcall(UnitXP, "behind",  "player", "target")
+      local okS, inSight  = pcall(UnitXP, "inSight", "player", "target")
+      local notBehind = okB and (behind == false)
+      local sightOK   = okS and (inSight ~= false)
+      behindOK = notBehind and sightOK
+    end
+  end
+
+  -- Range check (optional)
+  local rangeOK = true
+  if wantInRange ~= nil then
+    local hasID   = (spellID and spellID > 0)
+    local hasName = (name and name ~= "")
+    if IsSpellInRange and (hasID or hasName) then
+      local ok, res
+      if hasID then
+        ok, res = pcall(IsSpellInRange, spellID, "target")
+      else
+        ok, res = pcall(IsSpellInRange, name, "target")
+      end
+      if ok and (res == 1 or res == 0) then
+        rangeOK = (wantInRange == (res == 1))
+      else
+        -- nil / error: treat as in-range (Doite lenient fallback)
+        rangeOK = (wantInRange == true)
+      end
+    else
+      -- No spell identifier and no IsSpellInRange → fall back to "in range"
+      rangeOK = (wantInRange == true)
+    end
+  end
+
+  return behindOK and rangeOK
 end
 
 -------------------------------------------------
@@ -338,11 +412,11 @@ function sA:UpdateAuras()
       local currentDuration, currentStacks, currentDurationtext, spellID = 600, 20, "", nil
 
       local frame     = self.frames[id]     or CreateAuraFrame(id)
-      local dualframe = self.dualframes[id] or (aura.dual == 1 and CreateDualFrame(id))
+      local dualframe = self.dualframes[id] or (aura.dual == 1 and aura.type ~= "Cooldown" and aura.type ~= "Distance" and CreateDualFrame(id))
       local dragger   = self.draggers[id]   or CreateDraggerFrame(id, frame)
       self.frames[id] = frame
       self.draggers[id] = dragger
-      if aura.dual == 1 and aura.type ~= "Cooldown" then self.dualframes[id] = dualframe end
+      if aura.dual == 1 and aura.type ~= "Cooldown" and aura.type ~= "Distance" then self.dualframes[id] = dualframe end
       
       local isEnabled = (aura.enabled == nil or aura.enabled == 1)
       local shouldShow
@@ -359,27 +433,37 @@ function sA:UpdateAuras()
         show = 0 -- Default to not showing
         
         if conditionsMet then
-          -- Check for target existence if required by the aura
-          local targetCheckPassed = (aura.unit ~= "Target" or hasTarget)
-          
-          if targetCheckPassed then
-            -- Get aura data (icon indicates presence)
-            if sA.SuperWoW then
-                spellID, icon, duration, stacks = self:GetSuperAuraInfos(aura.name, aura.spellID, aura.unit, aura.type, aura.myCast)
-            else
-                icon, duration, stacks = self:GetAuraInfos(aura.name, aura.spellID, aura.unit, aura.type)
+          if aura.type == "Distance" then
+            -- Distance type: independent path, requires a current target
+            if hasTarget then
+              local passes = self:DistanceConditionPasses(
+                aura.showDistance or aura.distanceCondition,
+                aura.name, aura.spellID)
+              show = passes and 1 or 0
             end
-            
-            local auraIsPresent = icon and 1 or 0
-            
-            -- Apply inversion logic
-            if aura.type == "Cooldown" then
-              local onCooldown = duration and duration > 0
-              show = (((aura.showCD == "No CD" or aura.showCD == "Always") and not onCooldown) or ((aura.showCD == "CD" or aura.showCD == "Always") and onCooldown)) and 1 or 0
-            elseif aura.invert == 1 then
-              show = 1 - auraIsPresent
-            else
-              show = auraIsPresent
+          else
+            -- Check for target existence if required by the aura
+            local targetCheckPassed = (aura.unit ~= "Target" or hasTarget)
+
+            if targetCheckPassed then
+              -- Get aura data (icon indicates presence)
+              if sA.SuperWoW then
+                  spellID, icon, duration, stacks = self:GetSuperAuraInfos(aura.name, aura.spellID, aura.unit, aura.type, aura.myCast)
+              else
+                  icon, duration, stacks = self:GetAuraInfos(aura.name, aura.spellID, aura.unit, aura.type)
+              end
+
+              local auraIsPresent = icon and 1 or 0
+
+              -- Apply inversion logic
+              if aura.type == "Cooldown" then
+                local onCooldown = duration and duration > 0
+                show = (((aura.showCD == "No CD" or aura.showCD == "Always") and not onCooldown) or ((aura.showCD == "CD" or aura.showCD == "Always") and onCooldown)) and 1 or 0
+              elseif aura.invert == 1 then
+                show = 1 - auraIsPresent
+              else
+                show = auraIsPresent
+              end
             end
           end
         end
@@ -416,7 +500,7 @@ function sA:UpdateAuras()
         -- Duration text
         -------------------------------------------------
         if aura.duration == 1 and currentDuration then
-          if sA.SuperWoW and sA.learnNew[spellID] and sA.learnNew[spellID] == 1 then
+          if sA.SuperWoW and spellID and sA.learnNew[spellID] and sA.learnNew[spellID] == 1 then
 			currentDurationtext = "learning"
           elseif currentDuration > 100 then
             currentDurationtext = floor(currentDuration / 60 + 0.5) .. "m"
@@ -477,7 +561,7 @@ function sA:UpdateAuras()
         -------------------------------------------------
         -- Dual frame
         -------------------------------------------------
-        if aura.dual == 1 and aura.type ~= "Cooldown" and dualframe then
+        if aura.dual == 1 and aura.type ~= "Cooldown" and aura.type ~= "Distance" and dualframe then
           dualframe:SetPoint("CENTER", UIParent, "CENTER", -(aura.xpos or 0), aura.ypos or 0)
           dualframe:SetFrameLevel(128 - id)
           dualframe:SetWidth(48 * scale)
