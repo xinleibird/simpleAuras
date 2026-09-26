@@ -1,6 +1,7 @@
 ---------------------------------------------------------------
 -- Glow.lua
--- Animated ants glow overlay for aura frames.
+-- Glow overlay for aura frames: static border backdrop (IconAlert)
+-- plus animated ants line (IconAlertAnts).
 -- Animation advances one texCoord per UpdateAuras call (default
 -- simpleAuras tick = 200 ms; full cycle is ~4.4 s).
 -- Adapted from DoiteAuras' DoiteGlow.lua; pfUI dependencies removed.
@@ -34,6 +35,12 @@ local function GetOverlay()
   if not overlay then
     numOverlays = numOverlays + 1
     overlay = CreateFrame("Frame", "sAGlowOverlay" .. numOverlays)
+
+    -- Static glowing border backdrop (under the animated ants)
+    overlay.bg = overlay:CreateTexture(nil, "ARTWORK")
+    overlay.bg:SetTexture("Interface\\AddOns\\simpleAuras\\Textures\\IconAlert")
+    overlay.bg:SetTexCoord(0.0546, 0.4609, 0.3007, 0.5039)
+    overlay.bg:SetAllPoints(overlay)
 
     overlay.glow = overlay:CreateTexture(nil, "OVERLAY")
     overlay.glow:SetTexture("Interface\\AddOns\\simpleAuras\\Textures\\IconAlertAnts")
