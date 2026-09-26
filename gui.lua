@@ -461,7 +461,7 @@ function sA:EditAura(id)
   if not ed then
     ed = CreateFrame("Frame", "sAEdit", gui)
     ed:SetWidth(300)
-    ed:SetHeight(450)
+    ed:SetHeight(480)
     ed:SetPoint("LEFT", gui, "RIGHT", 10, 0)
     sA:SkinFrame(ed)
     ed:SetMovable(true)
