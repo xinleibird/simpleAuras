@@ -185,7 +185,8 @@ if sA.SuperWoW then
 			for _, auraID in ipairs(auraIDs) do
 				if simpleAuras.auras[auraID].unit ~= "Player"
 				 and simpleAuras.auras[auraID].type ~= "Cooldown"
-				 and simpleAuras.auras[auraID].type ~= "Distance" then
+				 and simpleAuras.auras[auraID].type ~= "Distance"
+				 and simpleAuras.auras[auraID].type ~= "Enchant" then
 					showLearn = true
 					break
 				end

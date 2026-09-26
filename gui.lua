@@ -407,6 +407,14 @@ function sA:SaveAura(id)
     data.targetAlive   = ed.targetAlive.value
     data.targetDead    = ed.targetDead.value
   end
+  if ed.enchantSlotButton then
+    data.enchantSlot          = ed.enchantSlotButton.text:GetText()
+    data.enchantAlertMissing  = ed.enchantAlertMissing.value
+    data.enchantAlertLowTime  = ed.enchantAlertLowTime.value
+    data.enchantAlertLowCharges = ed.enchantAlertLowCharges.value
+    data.enchantLowTime       = tonumber(ed.enchantLowTime:GetText()) or 180
+    data.enchantLowCharges    = tonumber(ed.enchantLowCharges:GetText()) or 20
+  end
 
   ed.name:ClearFocus()
   ed.texturePath:ClearFocus()
@@ -431,7 +439,7 @@ function sA:AddAura(copyId)
   if copyId and simpleAuras.auras[copyId] then
     simpleAuras.auras[newId] = deepCopy(simpleAuras.auras[copyId])
   else
-    simpleAuras.auras[newId] = {["enabled"]=1,["myCast"]=1,["name"]="",["spellID"]=0,["auracolor"]={[1]=1,[2]=1,[3]=1,[4]=1},["autodetect"]=0,["texture"]="Interface\\Icons\\INV_Misc_QuestionMark",["scale"]=1,["xpos"]=0,["ypos"]=0,["duration"]=0,["stacks"]=0,["type"]="Buff",["unit"]="Player",["showCD"]="Always",["showDistance"]="Any",["distanceCondition"]="Any",["lowduration"]=0,["lowdurationcolor"]={[1]=1,[2]=0,[3]=0,[4]=1},["lowdurationvalue"]=5,["inCombat"]=1,["outCombat"]=1,["inParty"]=0,["inRaid"]=0,["invert"]=0,["dual"]=0,["targetHelp"]=0,["targetHarm"]=0,["targetSelf"]=0,["targetAlive"]=0,["targetDead"]=0}
+    simpleAuras.auras[newId] = {["enabled"]=1,["myCast"]=1,["name"]="",["spellID"]=0,["auracolor"]={[1]=1,[2]=1,[3]=1,[4]=1},["autodetect"]=0,["texture"]="Interface\\Icons\\INV_Misc_QuestionMark",["scale"]=1,["xpos"]=0,["ypos"]=0,["duration"]=0,["stacks"]=0,["type"]="Buff",["unit"]="Player",["showCD"]="Always",["showDistance"]="Any",["distanceCondition"]="Any",["lowduration"]=0,["lowdurationcolor"]={[1]=1,[2]=0,[3]=0,[4]=1},["lowdurationvalue"]=5,["inCombat"]=1,["outCombat"]=1,["inParty"]=0,["inRaid"]=0,["invert"]=0,["dual"]=0,["targetHelp"]=0,["targetHarm"]=0,["targetSelf"]=0,["targetAlive"]=0,["targetDead"]=0,["enchantSlot"]="MainHand",["enchantAlertMissing"]=0,["enchantAlertLowTime"]=0,["enchantLowTime"]=180,["enchantAlertLowCharges"]=0,["enchantLowCharges"]=20}
   end
   if gui.editor and gui.editor:IsShown() then
     gui.editor:Hide()
@@ -461,7 +469,7 @@ function sA:EditAura(id)
   if not ed then
     ed = CreateFrame("Frame", "sAEdit", gui)
     ed:SetWidth(300)
-    ed:SetHeight(480)
+    ed:SetHeight(520)
     ed:SetPoint("LEFT", gui, "RIGHT", 10, 0)
     sA:SkinFrame(ed)
     ed:SetMovable(true)
@@ -794,6 +802,7 @@ function sA:EditAura(id)
         makeChoice("Debuff", 2)
         makeChoice("Cooldown", 3)
         makeChoice("Distance", 4)
+        makeChoice("Enchant", 5)
       end
       local menu = ed.typeButton.menu
       if menu:IsVisible() then menu:Hide() else menu:Show() end
@@ -1104,6 +1113,8 @@ function sA:EditAura(id)
     -- Target condition checkboxes (Distance type only):
     -- row 3: Friendly / Hostile / Self  (Doite "目标条件")
     -- row 4: Alive / Dead               (Doite "目标状态", mutually exclusive)
+    -- Skipped for Enchant type which uses its own rows below.
+    if aura.type ~= "Enchant" then
     local targetCheckKeys = { "targetHelp", "targetHarm", "targetSelf", "targetAlive", "targetDead" }
     ed.targetCheckKeys = targetCheckKeys
 
@@ -1154,6 +1165,148 @@ function sA:EditAura(id)
     tSelf:SetPoint("LEFT", tHarm.label, "RIGHT", 12, -1)
     tAlive:SetPoint("TOPLEFT", tHelp, "BOTTOMLEFT", 0, -15)
     tDead:SetPoint("LEFT", tAlive.label, "RIGHT", 12, -1)
+    end -- end if aura.type ~= "Enchant" (target condition rows)
+
+    -- Enchant type controls (created only when aura.type == "Enchant"):
+    -- row A: Slot dropdown (MainHand / OffHand)
+    -- row B: 3 alert checkboxes (Missing / Low Time / Low Charges)
+    -- row C: 2 threshold inputs (Low Time sec / Low Charges count)
+    if aura.type == "Enchant" then
+      ed.enchantSlotLabel = ed:CreateFontString(nil, "OVERLAY", "GameFontNormal")
+      ed.enchantSlotLabel:SetText("Slot:")
+      ed.enchantSlotLabel:SetPoint("TOPLEFT", ed.inParty, "BOTTOMLEFT", 12.5, -15)
+
+      ed.enchantSlotButton = CreateFrame("Button", nil, ed)
+      ed.enchantSlotButton:SetWidth(95)
+      ed.enchantSlotButton:SetHeight(20)
+      ed.enchantSlotButton:SetPoint("LEFT", ed.enchantSlotLabel, "RIGHT", 5, 0)
+      sA:SkinFrame(ed.enchantSlotButton, {0.2,0.2,0.2,1})
+      ed.enchantSlotButton.text = ed.enchantSlotButton:CreateFontString(nil, "OVERLAY", "GameFontNormal")
+      ed.enchantSlotButton.text:SetPoint("CENTER", ed.enchantSlotButton, "CENTER", 0, 0)
+      ed.enchantSlotButton:SetScript("OnEnter", function() ed.enchantSlotButton:SetBackdropColor(0.5,0.5,0.5,1) end)
+      ed.enchantSlotButton:SetScript("OnLeave", function() ed.enchantSlotButton:SetBackdropColor(0.2,0.2,0.2,1) end)
+      ed.enchantSlotButton:SetScript("OnClick", function(self)
+        if not ed.enchantSlotButton.menu then
+          local menu = CreateFrame("Frame", nil, ed)
+          menu:SetPoint("TOPLEFT", ed.enchantSlotButton, "BOTTOMLEFT", 0, -2)
+          menu:SetFrameStrata("DIALOG")
+          menu:SetFrameLevel(10)
+          menu:SetWidth(95)
+          menu:SetHeight(40)
+          sA:SkinFrame(menu, {0.15,0.15,0.15,1})
+          menu:Hide()
+          ed.enchantSlotButton.menu = menu
+          local function makeChoice(text, index)
+            local b = CreateFrame("Button", nil, menu)
+            b:SetWidth(95)
+            b:SetHeight(20)
+            b:SetPoint("TOPLEFT", menu, "TOPLEFT", 0, -((index - 1) * 20))
+            sA:SkinFrame(b, {0.2,0.2,0.2,1})
+            b.text = b:CreateFontString(nil, "OVERLAY", "GameFontWhite")
+            b.text:SetPoint("CENTER", b, "CENTER", 0, 0)
+            b.text:SetText(text)
+            b:SetScript("OnEnter", function() b:SetBackdropColor(0.5,0.5,0.5,1) end)
+            b:SetScript("OnLeave", function() b:SetBackdropColor(0.2,0.2,0.2,1) end)
+            b:SetScript("OnClick", function()
+              ed.enchantSlotButton.text:SetText(text)
+              aura.enchantSlot = text
+              menu:Hide()
+              sA:SaveAura(id)
+            end)
+          end
+          makeChoice("MainHand", 1)
+          makeChoice("OffHand",  2)
+        end
+        local menu = ed.enchantSlotButton.menu
+        if menu:IsVisible() then menu:Hide() else menu:Show() end
+      end)
+      ed.enchantSlotButton:Hide()
+      ed.enchantSlotLabel:Hide()
+
+      -- Alert checkboxes (helper)
+      local function makeEnchantCheck(key, text)
+        local cb = CreateFrame("Button", nil, ed)
+        cb:SetWidth(16)
+        cb:SetHeight(16)
+        sA:SkinFrame(cb, {0.15,0.15,0.15,1})
+        cb:SetScript("OnEnter", function() cb:SetBackdropColor(0.5,0.5,0.5,1) end)
+        cb:SetScript("OnLeave", function() cb:SetBackdropColor(0.15,0.15,0.15,1) end)
+        cb.checked = cb:CreateTexture(nil, "OVERLAY")
+        cb.checked:SetTexture("Interface\\Buttons\\WHITE8x8")
+        cb.checked:SetVertexColor(1, 0.8, 0.06, 1)
+        cb.checked:SetPoint("CENTER", cb, "CENTER", 0, 0)
+        cb.checked:SetWidth(7)
+        cb.checked:SetHeight(7)
+        cb.value = 0
+        cb:SetScript("OnClick", function(self)
+          cb.value = 1 - (cb.value or 0)
+          if cb.value == 1 then cb.checked:Show() else cb.checked:Hide() end
+          sA:SaveAura(id)
+        end)
+        ed[key] = cb
+        cb.label = ed:CreateFontString(nil, "OVERLAY", "GameFontNormal")
+        cb.label:SetPoint("LEFT", cb, "RIGHT", 5, 1)
+        cb.label:SetText(text)
+        cb:Hide()
+        cb.label:Hide()
+        return cb
+      end
+
+      local eMiss  = makeEnchantCheck("enchantAlertMissing",    "Missing")
+      local eLowT  = makeEnchantCheck("enchantAlertLowTime",    "Low Time")
+      local eLowC  = makeEnchantCheck("enchantAlertLowCharges", "Low Charges")
+
+      eMiss:SetPoint("TOPLEFT", ed.enchantSlotLabel, "BOTTOMLEFT", 0, -15)
+      eLowT:SetPoint("LEFT", eMiss.label, "RIGHT", 18, -1)
+      eLowC:SetPoint("LEFT", eLowT.label, "RIGHT", 18, -1)
+
+      -- Threshold inputs (always visible for clarity)
+      ed.enchantLowTimeLabel = ed:CreateFontString(nil, "OVERLAY", "GameFontNormal")
+      ed.enchantLowTimeLabel:SetText("Low Time:")
+      ed.enchantLowTimeLabel:SetPoint("TOPLEFT", eMiss, "BOTTOMLEFT", 0, -15)
+
+      ed.enchantLowTime = CreateFrame("EditBox", nil, ed)
+      ed.enchantLowTime:SetPoint("LEFT", ed.enchantLowTimeLabel, "RIGHT", 5, 0)
+      ed.enchantLowTime:SetWidth(40)
+      ed.enchantLowTime:SetHeight(20)
+      ed.enchantLowTime:SetJustifyH("CENTER")
+      ed.enchantLowTime:SetMultiLine(false)
+      ed.enchantLowTime:SetAutoFocus(false)
+      ed.enchantLowTime:SetFontObject(GameFontHighlightSmall)
+      ed.enchantLowTime:SetTextColor(1,1,1)
+      ed.enchantLowTime:SetBackdrop({ bgFile = "Interface\\Buttons\\WHITE8x8", edgeFile = "Interface\\Buttons\\WHITE8x8", edgeSize = 1 })
+      ed.enchantLowTime:SetBackdropColor(0.1,0.1,0.1,1)
+      ed.enchantLowTime:SetBackdropBorderColor(0,0,0,1)
+      ed.enchantLowTime:SetScript("OnEnterPressed", function() sA:SaveAura(id) end)
+
+      ed.enchantLowTimeUnit = ed:CreateFontString(nil, "OVERLAY", "GameFontNormal")
+      ed.enchantLowTimeUnit:SetPoint("LEFT", ed.enchantLowTime, "RIGHT", 2, 0)
+      ed.enchantLowTimeUnit:SetText("sec")
+
+      ed.enchantLowChargesLabel = ed:CreateFontString(nil, "OVERLAY", "GameFontNormal")
+      ed.enchantLowChargesLabel:SetText("Low Charges:")
+      ed.enchantLowChargesLabel:SetPoint("LEFT", ed.enchantLowTimeUnit, "RIGHT", 15, 0)
+
+      ed.enchantLowCharges = CreateFrame("EditBox", nil, ed)
+      ed.enchantLowCharges:SetPoint("LEFT", ed.enchantLowChargesLabel, "RIGHT", 5, 0)
+      ed.enchantLowCharges:SetWidth(30)
+      ed.enchantLowCharges:SetHeight(20)
+      ed.enchantLowCharges:SetJustifyH("CENTER")
+      ed.enchantLowCharges:SetMultiLine(false)
+      ed.enchantLowCharges:SetAutoFocus(false)
+      ed.enchantLowCharges:SetFontObject(GameFontHighlightSmall)
+      ed.enchantLowCharges:SetTextColor(1,1,1)
+      ed.enchantLowCharges:SetBackdrop({ bgFile = "Interface\\Buttons\\WHITE8x8", edgeFile = "Interface\\Buttons\\WHITE8x8", edgeSize = 1 })
+      ed.enchantLowCharges:SetBackdropColor(0.1,0.1,0.1,1)
+      ed.enchantLowCharges:SetBackdropBorderColor(0,0,0,1)
+      ed.enchantLowCharges:SetScript("OnEnterPressed", function() sA:SaveAura(id) end)
+
+      ed.enchantLowTime:Hide()
+      ed.enchantLowTimeLabel:Hide()
+      ed.enchantLowTimeUnit:Hide()
+      ed.enchantLowCharges:Hide()
+      ed.enchantLowChargesLabel:Hide()
+    end -- end if aura.type == "Enchant"
 
     -- Invert / Dual
     ed.invert = CreateFrame("Button", nil, ed)
@@ -1229,6 +1382,40 @@ function sA:EditAura(id)
 			ed[key]:Show()
 			ed[key].label:Show()
 		end
+	elseif aura.type == "Enchant" then
+		-- Enchant: weapon enchant monitor.
+		-- Hide Buff/Debuff-only fields; show duration/stacks/lowduration
+		-- so the user can toggle time/charge text display and red color.
+		ed.myCast:Hide()
+		ed.myCastLabel:Hide()
+		ed.unitLabel:Hide()
+		ed.unitButton:Hide()
+		ed.invert:Hide()
+		ed.invertLabel:Hide()
+		ed.dual:Hide()
+		ed.dualLabel:Hide()
+		ed.showCD:Hide()
+		ed.showDistance:Hide()
+		-- Texture browse is irrelevant: icon is always the weapon texture.
+		ed.texLabel:Hide()
+		ed.auracolorpicker:Hide()
+		ed.autoDetect:Hide()
+		ed.autoLabel:Hide()
+		ed.texturePath:Hide()
+		ed.browseBtn:Hide()
+		ed.enchantSlotButton:Show()
+		ed.enchantSlotLabel:Show()
+		ed.enchantAlertMissing:Show()
+		ed.enchantAlertMissing.label:Show()
+		ed.enchantAlertLowTime:Show()
+		ed.enchantAlertLowTime.label:Show()
+		ed.enchantAlertLowCharges:Show()
+		ed.enchantAlertLowCharges.label:Show()
+		ed.enchantLowTime:Show()
+		ed.enchantLowTimeLabel:Show()
+		ed.enchantLowTimeUnit:Show()
+		ed.enchantLowCharges:Show()
+		ed.enchantLowChargesLabel:Show()
 	end
 
     -- Delete / Close / Copy buttons
@@ -1347,6 +1534,17 @@ function sA:EditAura(id)
       if ed[key].value == 1 then ed[key].checked:Show() else ed[key].checked:Hide() end
     end
   end
+  if ed.enchantSlotButton then
+    ed.enchantSlotButton.text:SetText(aura.enchantSlot or "MainHand")
+    ed.enchantAlertMissing.value  = aura.enchantAlertMissing  or 0
+    ed.enchantAlertLowTime.value  = aura.enchantAlertLowTime  or 0
+    ed.enchantAlertLowCharges.value = aura.enchantAlertLowCharges or 0
+    if ed.enchantAlertMissing.value  == 1 then ed.enchantAlertMissing.checked:Show() else ed.enchantAlertMissing.checked:Hide() end
+    if ed.enchantAlertLowTime.value  == 1 then ed.enchantAlertLowTime.checked:Show() else ed.enchantAlertLowTime.checked:Hide() end
+    if ed.enchantAlertLowCharges.value == 1 then ed.enchantAlertLowCharges.checked:Show() else ed.enchantAlertLowCharges.checked:Hide() end
+    ed.enchantLowTime:SetText(tostring(aura.enchantLowTime or 180))
+    ed.enchantLowCharges:SetText(tostring(aura.enchantLowCharges or 20))
+  end
 
   ed.export:SetScript("OnClick", function() sA:ExportSingleAura(id) end)
 
@@ -1354,7 +1552,12 @@ function sA:EditAura(id)
   sA.TestAura:SetPoint("CENTER", UIParent, "CENTER", aura.xpos or 0, aura.ypos or 0)
   sA.TestAura:SetWidth(48*(aura.scale or 1))
   sA.TestAura:SetHeight(48*(aura.scale or 1))
-  sA.TestAura.texture:SetTexture(aura.texture)
+  local previewTexture = aura.texture
+  if aura.type == "Enchant" then
+    local slotID = (aura.enchantSlot == "OffHand") and 17 or 16
+    previewTexture = GetInventoryItemTexture and GetInventoryItemTexture("player", slotID) or previewTexture
+  end
+  sA.TestAura.texture:SetTexture(previewTexture)
   sA.TestAura.texture:SetVertexColor(unpack(aura.auracolor or {1,1,1,1}))
   if aura.duration == 1 then sA.TestAura.durationtext:SetText("60") sA.TestAura.durationtext:SetFont("Fonts\\FRIZQT__.TTF", (20*aura.scale), "OUTLINE") else sA.TestAura.durationtext:SetText("") end
   if aura.stacks == 1 then sA.TestAura.stackstext:SetText("20") sA.TestAura.stackstext:SetFont("Fonts\\FRIZQT__.TTF", (14*aura.scale), "OUTLINE") else sA.TestAura.stackstext:SetText("") end
@@ -1370,7 +1573,7 @@ function sA:EditAura(id)
 	  
   sA.TestAura:Show()
   
-  if aura.dual == 1 and aura.type ~= "Cooldown" and aura.type ~= "Distance" then
+  if aura.dual == 1 and aura.type ~= "Cooldown" and aura.type ~= "Distance" and aura.type ~= "Enchant" then
     sA.TestAuraDual:SetPoint("CENTER", UIParent, "CENTER", -(aura.xpos or 0), aura.ypos or 0)
     sA.TestAuraDual:SetWidth(48*(aura.scale or 1))
     sA.TestAuraDual:SetHeight(48*(aura.scale or 1))

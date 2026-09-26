@@ -78,7 +78,7 @@ Icon/Texture:
 
 Conditions:
 - Unit: Which unit the aura is on.
-- Type: is it a buff, debuff, cooldown, or distance-to-target.
+- Type: is it a buff, debuff, cooldown, distance-to-target, or weapon enchant.
 - Low Duration Color*: If the auracolor should change at or below "lowduration"
 - Low Duration in secs*: When the duration is at or below this many seconds, **and "Low Duration Color" is enabled**, the duration text uses 1-decimal format and the text color turns red. When "Low Duration Color" is disabled, the duration text uses integer seconds regardless.
 - In/Out of Combat: When aura should be shown
@@ -105,6 +105,15 @@ Distance:
 - When `UnitXP` is unavailable, Behind/Front conditions never show (conservative).
 - When `IsSpellInRange` returns nil for an unknown spell, the condition is treated as "in range".
 - Dual is not available for Distance auras.
+
+Enchant:
+- Monitors the temporary weapon enchant on the **MainHand** or **OffHand** slot. Icon shows when any checked alert fires (OR logic):
+  - **Missing** — the selected slot currently has no temporary enchant.
+  - **Low Time** — enchant exists and remaining time is `<=` Low Time (default 180 sec, i.e. 3 minutes).
+  - **Low Charges** — enchant exists and remaining charges are `<=` Low Charges (default 20).
+- Icon uses the weapon's own texture (`GetInventoryItemTexture`), so it stays the same regardless of enchant presence.
+- Remaining time text and charges text overlay the icon only when the existing `Show Duration` / `Show Stacks` options are enabled — there is no always-show.
+- Dual is not available for Enchant auras.
 
 Cooldown:
 - Always: Shows Cooldown Icon if it's on CD or not.

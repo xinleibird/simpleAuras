@@ -88,6 +88,7 @@ end
 -------------------------------------------------
 local function find_aura(name, spellID, unit, auratype, myCast)
   if auratype == "Distance" then return false end
+  if auratype == "Enchant" then return false end
   local useSpellID = spellID and spellID > 0
   local found, foundstacks, foundsid, foundrem, foundtex
   local function search(is_debuff)
@@ -455,11 +456,11 @@ function sA:UpdateAuras()
       local currentDuration, currentStacks, currentDurationtext, spellID = 600, 20, "", nil
 
       local frame     = self.frames[id]     or CreateAuraFrame(id)
-      local dualframe = self.dualframes[id] or (aura.dual == 1 and aura.type ~= "Cooldown" and aura.type ~= "Distance" and CreateDualFrame(id))
+      local dualframe = self.dualframes[id] or (aura.dual == 1 and aura.type ~= "Cooldown" and aura.type ~= "Distance" and aura.type ~= "Enchant" and CreateDualFrame(id))
       local dragger   = self.draggers[id]   or CreateDraggerFrame(id, frame)
       self.frames[id] = frame
       self.draggers[id] = dragger
-      if aura.dual == 1 and aura.type ~= "Cooldown" and aura.type ~= "Distance" then self.dualframes[id] = dualframe end
+      if aura.dual == 1 and aura.type ~= "Cooldown" and aura.type ~= "Distance" and aura.type ~= "Enchant" then self.dualframes[id] = dualframe end
       
       local isEnabled = (aura.enabled == nil or aura.enabled == 1)
       local shouldShow
@@ -484,6 +485,52 @@ function sA:UpdateAuras()
                 aura.showDistance or aura.distanceCondition,
                 aura.name, aura.spellID)
               show = passes and 1 or 0
+            end
+          elseif aura.type == "Enchant" then
+            -- Enchant type: alert when weapon enchant is missing OR low on
+            -- time OR low on charges (any checked trigger fires the icon).
+            -- Icon = the weapon's own texture; duration/stacks text shown
+            -- only when aura.duration / aura.stacks is enabled (existing gates).
+            local slotID = (aura.enchantSlot == "OffHand") and 17 or 16
+            local tex = GetInventoryItemTexture and GetInventoryItemTexture("player", slotID)
+            if tex then
+              local hasEnchant, remMS, charges
+              if sA.SuperWoW and GetEquippedItem then
+                local info = GetEquippedItem("player", slotID)
+                if info then
+                  hasEnchant = info.tempEnchantId and info.tempEnchantId > 0
+                  remMS = info.tempEnchantmentTimeLeftMs
+                  charges = info.tempEnchantmentCharges
+                  tex = tex or info.texture
+                end
+              end
+              if hasEnchant == nil then
+                local hMH, mhExpireMS, mhCharges, hOH, ohExpireMS, ohCharges = GetWeaponEnchantInfo()
+                if slotID == 16 then
+                  hasEnchant = hMH and hMH == 1
+                  remMS = mhExpireMS
+                  charges = mhCharges
+                else
+                  hasEnchant = hOH and hOH == 1
+                  remMS = ohExpireMS
+                  charges = ohCharges
+                end
+              end
+              local present = hasEnchant and true or false
+              icon = tex
+              duration = (remMS or 0) / 1000
+              stacks = charges or 0
+              -- Guard against nil remaining/charges (some SuperWoW builds
+              -- omit these fields); only alert when the value is actually
+              -- known, so an unknown value does not fire the alert forever.
+              local alert =
+                   (aura.enchantAlertMissing    == 1 and not present)
+                or (aura.enchantAlertLowTime    == 1 and present and remMS    ~= nil and remMS    <= (aura.enchantLowTime     or 0) * 1000)
+                or (aura.enchantAlertLowCharges == 1 and present and charges   ~= nil and charges   <= (aura.enchantLowCharges or 0))
+              show = alert and 1 or 0
+            else
+              -- No weapon in slot: nothing to alert about.
+              show = 0
             end
           else
             -- Check for target existence if required by the aura
@@ -571,9 +618,9 @@ function sA:UpdateAuras()
         frame:SetPoint("CENTER", UIParent, "CENTER", aura.xpos or 0, aura.ypos or 0)
         frame:SetFrameLevel(128 - id)
         frame:SetWidth(48 * scale)
-  	    frame:SetHeight(48 * scale)
-        frame.texture:SetTexture(aura.texture)
-        frame.durationtext:SetText((aura.duration == 1 and (sA.SuperWoW or aura.unit == "Player" or aura.type == "Cooldown")) and currentDurationtext or "")
+        frame:SetHeight(48 * scale)
+        frame.texture:SetTexture(aura.type == "Enchant" and icon or aura.texture)
+        frame.durationtext:SetText((aura.duration == 1 and (sA.SuperWoW or aura.unit == "Player" or aura.type == "Cooldown" or aura.type == "Enchant")) and currentDurationtext or "")
         frame.stackstext:SetText((aura.stacks == 1) and currentStacks or "")
         if aura.duration == 1 then frame.durationtext:SetFont(FONT, 20 * textscale, "OUTLINE") end
         if aura.stacks   == 1 then frame.stackstext:SetFont(FONT, 14 * scale, "OUTLINE") end
@@ -592,7 +639,7 @@ function sA:UpdateAuras()
         local durationcolor = {1.0, 0.82, 0.0, alpha}
         local stackcolor    = {1, 1, 1, alpha}
         if aura.lowduration == 1
-           and (sA.SuperWoW or aura.unit == "Player" or aura.type == "Cooldown")
+           and (sA.SuperWoW or aura.unit == "Player" or aura.type == "Cooldown" or aura.type == "Enchant")
            and currentDuration
            and currentDuration <= (aura.lowdurationvalue or 5)
            and currentDurationtext ~= "learning" then
@@ -605,7 +652,7 @@ function sA:UpdateAuras()
         -------------------------------------------------
         -- Dual frame
         -------------------------------------------------
-        if aura.dual == 1 and aura.type ~= "Cooldown" and aura.type ~= "Distance" and dualframe then
+        if aura.dual == 1 and aura.type ~= "Cooldown" and aura.type ~= "Distance" and aura.type ~= "Enchant" and dualframe then
           dualframe:SetPoint("CENTER", UIParent, "CENTER", -(aura.xpos or 0), aura.ypos or 0)
           dualframe:SetFrameLevel(128 - id)
           dualframe:SetWidth(48 * scale)
@@ -616,7 +663,7 @@ function sA:UpdateAuras()
           else
             dualframe.texture:SetVertexColor(r, g, b, alpha)
           end
-          dualframe.durationtext:SetText((aura.duration == 1 and (sA.SuperWoW or aura.unit == "Player" or aura.type == "Cooldown")) and currentDurationtext or "")
+          dualframe.durationtext:SetText((aura.duration == 1 and (sA.SuperWoW or aura.unit == "Player" or aura.type == "Cooldown" or aura.type == "Enchant")) and currentDurationtext or "")
           dualframe.stackstext:SetText((aura.stacks == 1) and currentStacks or "")
           if aura.duration == 1 then dualframe.durationtext:SetFont(FONT, 20 * scale, "OUTLINE") end
           if aura.stacks   == 1 then dualframe.stackstext:SetFont(FONT, 14 * scale, "OUTLINE") end
