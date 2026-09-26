@@ -1420,9 +1420,10 @@ function sA:EditAura(id)
 		ed.dualLabel:Hide()
 		ed.showCD:Hide()
 		ed.showDistance:Hide()
-		-- Texture browse is irrelevant: icon is always the weapon texture.
-		ed.texLabel:Hide()
-		ed.auracolorpicker:Hide()
+		-- Icon/Texture label + auracolor picker stay visible: auracolor
+		-- (including alpha) is applied to the Enchant icon in core.lua.
+		-- Texture path / Browse / Autodetect stay hidden: the icon is
+		-- always the weapon texture.
 		ed.autoDetect:Hide()
 		ed.autoLabel:Hide()
 		ed.texturePath:Hide()
