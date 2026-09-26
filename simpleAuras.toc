@@ -5,5 +5,7 @@
 ## Author: yani9o
 ## SavedVariablesPerCharacter: simpleAuras
 init.lua
+Glow.lua
 core.lua
 gui.lua
+Textures\IconAlertAnts.tga

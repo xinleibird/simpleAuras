@@ -384,6 +384,7 @@ function sA:SaveAura(id)
   data.ypos            = tonumber(ed.y:GetText())
   data.duration        = ed.duration.value
   data.stacks          = ed.stacks.value
+  data.glow            = ed.glow.value
   data.lowduration     = ed.lowduration.value
   data.lowdurationvalue= tonumber(ed.lowdurationvalue:GetText())
   data.lowdurationcolor= ed.lowdurationcolor
@@ -439,7 +440,7 @@ function sA:AddAura(copyId)
   if copyId and simpleAuras.auras[copyId] then
     simpleAuras.auras[newId] = deepCopy(simpleAuras.auras[copyId])
   else
-    simpleAuras.auras[newId] = {["enabled"]=1,["myCast"]=1,["name"]="",["spellID"]=0,["auracolor"]={[1]=1,[2]=1,[3]=1,[4]=1},["autodetect"]=0,["texture"]="Interface\\Icons\\INV_Misc_QuestionMark",["scale"]=1,["xpos"]=0,["ypos"]=0,["duration"]=0,["stacks"]=0,["type"]="Buff",["unit"]="Player",["showCD"]="Always",["showDistance"]="Any",["distanceCondition"]="Any",["lowduration"]=0,["lowdurationcolor"]={[1]=1,[2]=0,[3]=0,[4]=1},["lowdurationvalue"]=5,["inCombat"]=1,["outCombat"]=1,["inParty"]=0,["inRaid"]=0,["invert"]=0,["dual"]=0,["targetHelp"]=0,["targetHarm"]=0,["targetSelf"]=0,["targetAlive"]=0,["targetDead"]=0,["enchantSlot"]="MainHand",["enchantAlertMissing"]=0,["enchantAlertLowTime"]=0,["enchantLowTime"]=180,["enchantAlertLowCharges"]=0,["enchantLowCharges"]=20}
+    simpleAuras.auras[newId] = {["enabled"]=1,["myCast"]=1,["name"]="",["spellID"]=0,["auracolor"]={[1]=1,[2]=1,[3]=1,[4]=1},["autodetect"]=0,["texture"]="Interface\\Icons\\INV_Misc_QuestionMark",["scale"]=1,["xpos"]=0,["ypos"]=0,["duration"]=0,["stacks"]=0,["glow"]=0,["type"]="Buff",["unit"]="Player",["showCD"]="Always",["showDistance"]="Any",["distanceCondition"]="Any",["lowduration"]=0,["lowdurationcolor"]={[1]=1,[2]=0,[3]=0,[4]=1},["lowdurationvalue"]=5,["inCombat"]=1,["outCombat"]=1,["inParty"]=0,["inRaid"]=0,["invert"]=0,["dual"]=0,["targetHelp"]=0,["targetHarm"]=0,["targetSelf"]=0,["targetAlive"]=0,["targetDead"]=0,["enchantSlot"]="MainHand",["enchantAlertMissing"]=0,["enchantAlertLowTime"]=0,["enchantLowTime"]=180,["enchantAlertLowCharges"]=0,["enchantLowCharges"]=20}
   end
   if gui.editor and gui.editor:IsShown() then
     gui.editor:Hide()
@@ -723,7 +724,7 @@ function sA:EditAura(id)
     ed.stacks = CreateFrame("Button", nil, ed)
     ed.stacks:SetWidth(16)
     ed.stacks:SetHeight(16)
-    ed.stacks:SetPoint("LEFT", ed.durationLabel, "RIGHT", 65, 0)
+    ed.stacks:SetPoint("LEFT", ed.durationLabel, "RIGHT", 12, 0)
     sA:SkinFrame(ed.stacks, {0.15,0.15,0.15,1})
     ed.stacks:SetScript("OnEnter", function() ed.stacks:SetBackdropColor(0.5,0.5,0.5,1) end)
     ed.stacks:SetScript("OnLeave", function() ed.stacks:SetBackdropColor(0.15,0.15,0.15,1) end)
@@ -742,6 +743,29 @@ function sA:EditAura(id)
     ed.stacksLabel = ed:CreateFontString(nil, "OVERLAY", "GameFontNormal")
     ed.stacksLabel:SetPoint("LEFT", ed.stacks, "RIGHT", 5, 0)
     ed.stacksLabel:SetText("Show Stacks")
+
+    ed.glow = CreateFrame("Button", nil, ed)
+    ed.glow:SetWidth(16)
+    ed.glow:SetHeight(16)
+    ed.glow:SetPoint("LEFT", ed.stacksLabel, "RIGHT", 12, 0)
+    sA:SkinFrame(ed.glow, {0.15,0.15,0.15,1})
+    ed.glow:SetScript("OnEnter", function() ed.glow:SetBackdropColor(0.5,0.5,0.5,1) end)
+    ed.glow:SetScript("OnLeave", function() ed.glow:SetBackdropColor(0.15,0.15,0.15,1) end)
+    ed.glow.checked = ed.glow:CreateTexture(nil, "OVERLAY")
+    ed.glow.checked:SetTexture("Interface\\Buttons\\WHITE8x8")
+    ed.glow.checked:SetVertexColor(1,0.8,0.06,1)
+    ed.glow.checked:SetPoint("CENTER", ed.glow, "CENTER", 0, 0)
+    ed.glow.checked:SetWidth(7)
+    ed.glow.checked:SetHeight(7)
+    ed.glow.value = 0
+    ed.glow:SetScript("OnClick", function(self)
+      ed.glow.value = 1 - (ed.glow.value or 0)
+      if ed.glow.value == 1 then ed.glow.checked:Show() else ed.glow.checked:Hide() end
+      sA:SaveAura(id)
+    end)
+    ed.glowLabel = ed:CreateFontString(nil, "OVERLAY", "GameFontNormal")
+    ed.glowLabel:SetPoint("LEFT", ed.glow, "RIGHT", 5, 0)
+    ed.glowLabel:SetText("Glow")
 
     -- Conditions (unit / type)
     local linetwo = ed:CreateTexture(nil, "OVERLAY")
@@ -1499,6 +1523,9 @@ function sA:EditAura(id)
 
   ed.stacks.value = aura.stacks or 0
   if ed.stacks.value == 1 then ed.stacks.checked:Show() else ed.stacks.checked:Hide() end
+
+  ed.glow.value = aura.glow or 0
+  if ed.glow.value == 1 then ed.glow.checked:Show() else ed.glow.checked:Hide() end
 
   ed.lowduration.value = aura.lowduration or 0
   if ed.lowduration.value == 1 then ed.lowduration.checked:Show() else ed.lowduration.checked:Hide() end

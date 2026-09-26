@@ -568,6 +568,12 @@ function sA:UpdateAuras()
           shouldShow = false
       end
 
+      -- Defensive Stop for any glow attached to a frame we are about to hide.
+      -- The block below re-shows + re-ticks when shouldShow becomes true again.
+      if not shouldShow and frame.glow and sA.Glow then
+        sA.Glow.Stop(frame)
+      end
+
       if shouldShow then
         -- Get fresh aura data only if we are going to show it
         if not (icon or aura.name) then -- Data might not have been fetched in /sa mode
@@ -650,6 +656,15 @@ function sA:UpdateAuras()
         frame:Show()
 
         -------------------------------------------------
+        -- Glow (ants) overlay
+        -------------------------------------------------
+        if aura.glow == 1 and sA.Glow then
+          sA.Glow.Tick(frame)
+        elseif frame.glow then
+          sA.Glow.Stop(frame)
+        end
+
+        -------------------------------------------------
         -- Dual frame
         -------------------------------------------------
         if aura.dual == 1 and aura.type ~= "Cooldown" and aura.type ~= "Distance" and aura.type ~= "Enchant" and dualframe then
@@ -678,7 +693,10 @@ function sA:UpdateAuras()
       end
     else
       -- This is a new/empty aura, make sure its frame is hidden if it exists
-      if self.frames[id] then self.frames[id]:Hide() end
+      if self.frames[id] then
+        if self.frames[id].glow and sA.Glow then sA.Glow.Stop(self.frames[id]) end
+        self.frames[id]:Hide()
+      end
       if self.dualframes[id] then self.dualframes[id]:Hide() end
     end
   end

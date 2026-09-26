@@ -74,6 +74,7 @@ Icon/Texture:
 - Scale: Basescale of 1 is 48x48px.
 - x/y pos: Position from center of the screen.
 - Show Duration*/Stacks: Shows Duration in the center of the icon/texture, stacks are under that.
+- Glow: Shows an animated ants glow around the icon while the aura is visible. The animation follows the refresh rate (`/sa refresh`, default 5 updates per second).
 
 
 Conditions:
