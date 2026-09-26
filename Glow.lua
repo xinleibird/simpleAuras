@@ -2,8 +2,9 @@
 -- Glow.lua
 -- Glow overlay for aura frames: static border backdrop (IconAlert)
 -- plus animated ants line (IconAlertAnts).
--- Animation advances one texCoord per UpdateAuras call (default
--- simpleAuras tick = 200 ms; full cycle is ~4.4 s).
+-- Animation runs on the overlay's own OnUpdate at 0.04 s/frame
+-- (25 fps, full cycle ~0.88 s) - same speed as DoiteAuras,
+-- independent of the simpleAuras refresh rate.
 -- Adapted from DoiteAuras' DoiteGlow.lua; pfUI dependencies removed.
 -- WoW 1.12 | Lua 5.0
 ---------------------------------------------------------------
@@ -24,6 +25,8 @@ local pool = {}
 local numOverlays = 0
 -- cycle frames 1..22 then back to 1 (Doite convention)
 local NUM_FRAMES = 22
+-- seconds per animation frame (Doite value; 22-frame cycle ~0.88 s)
+local updateInterval = 0.04
 
 local function NextIndex(i)
   if i >= NUM_FRAMES then return 1 end
@@ -50,32 +53,39 @@ local function GetOverlay()
   return overlay
 end
 
--- Advance the glow animation by one frame. Called once per
--- simpleAuras UpdateAuras tick when aura.glow == 1 and the
--- aura frame is being shown. Lazily attaches the overlay on
--- the first call so existing auras do not pay the cost.
-function Glow.Tick(frame)
-  if not frame then return end
-  local overlay = frame.glow
-  if not overlay then
-    overlay = GetOverlay()
-    overlay:SetParent(frame)
-    overlay:SetFrameStrata(frame:GetFrameStrata())
-    overlay:SetAllPoints(frame)
-    overlay.index = 1
-    frame.glow = overlay
-    overlay:Show()
-  end
-  local tc = texCoords[overlay.index]
-  overlay.glow:SetTexCoord(tc[1], tc[2], tc[3], tc[4])
-  overlay.index = NextIndex(overlay.index)
+-- Attach the glow overlay to the aura frame and start the ants
+-- animation. Called from UpdateAuras when aura.glow == 1 and the
+-- aura frame is being shown. Idempotent: returns immediately when
+-- the overlay is already attached. The animation itself runs on
+-- the overlay's own OnUpdate (0.04 s per frame).
+function Glow.Start(frame)
+  if not frame or frame.glow then return end
+  local overlay = GetOverlay()
+  overlay:SetParent(frame)
+  overlay:SetFrameStrata(frame:GetFrameStrata())
+  overlay:SetAllPoints(frame)
+  overlay.index = 1
+  overlay.lastUpdated = 0
+  frame.glow = overlay
+  overlay:Show()
+
+  overlay:SetScript("OnUpdate", function()
+    overlay.lastUpdated = overlay.lastUpdated + arg1
+    if overlay.lastUpdated > updateInterval then
+      overlay.index = NextIndex(overlay.index)
+      local tc = texCoords[overlay.index]
+      overlay.glow:SetTexCoord(tc[1], tc[2], tc[3], tc[4])
+      overlay.lastUpdated = 0
+    end
+  end)
 end
 
--- Detach the overlay and return it to the pool. Safe to call
--- when no overlay is attached.
+-- Detach the overlay, stop the animation and return it to the
+-- pool. Safe to call when no overlay is attached.
 function Glow.Stop(frame)
   if not frame or not frame.glow then return end
   local overlay = frame.glow
+  overlay:SetScript("OnUpdate", nil)
   frame.glow = nil
   overlay:Hide()
   overlay:SetParent(UIParent)

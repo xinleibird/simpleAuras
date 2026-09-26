@@ -569,7 +569,8 @@ function sA:UpdateAuras()
       end
 
       -- Defensive Stop for any glow attached to a frame we are about to hide.
-      -- The block below re-shows + re-ticks when shouldShow becomes true again.
+      -- The block below re-shows + restarts the glow when shouldShow becomes
+      -- true again.
       if not shouldShow and frame.glow and sA.Glow then
         sA.Glow.Stop(frame)
       end
@@ -659,7 +660,7 @@ function sA:UpdateAuras()
         -- Glow (ants) overlay
         -------------------------------------------------
         if aura.glow == 1 and sA.Glow then
-          sA.Glow.Tick(frame)
+          sA.Glow.Start(frame)
         elseif frame.glow then
           sA.Glow.Stop(frame)
         end
