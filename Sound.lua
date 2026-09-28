@@ -4,10 +4,14 @@
 -- Trigger rules:
 --   invert=0 -> play when aura becomes present (aura gain).
 --   invert=1 -> play when aura becomes absent  (aura loss / Invert edge).
---   Cooldown (no invert option in the editor) -> play only when the
---   icon appears, i.e. the CD state flip that shows it (showCD="No CD"
---   fires on CD end, showCD="CD" fires on CD start, showCD="Always"
---   never fires because the icon never changes state).
+--   Types whose Invert option is hidden in the editor (Cooldown,
+--   Enchant, Distance) -> play only when the icon appears, ignoring
+--   aura.invert (a stale invert=1 left in saved data must not gate
+--   the trigger the user cannot see):
+--     Cooldown: showCD="No CD" fires on CD end, showCD="CD" fires on
+--     CD start, showCD="Always" never fires (icon state never flips).
+--     Enchant:  fires when the alert appears (missing/low enchant).
+--     Distance: fires when the distance condition starts passing.
 -- Edge-detected via per-aura state table; first observation per
 -- aura is suppressed so login / ReloadUI does not play anything.
 -- WoW 1.12 | Lua 5.0
@@ -35,8 +39,9 @@ end
 --   Enchant:     alert
 --   Distance:    passes
 -- `aura.soundEnabled == 1` and `aura.sound ~= ""` are required.
--- aura.invert selects which edge fires; Cooldown fires on the gain
--- edge only because its invert option is hidden in the editor.
+-- aura.invert selects which edge fires, except for types without an
+-- Invert option in the editor (Cooldown/Enchant/Distance), which
+-- always fire on the gain edge (icon appears) only.
 function Sound.HandleStateChange(auraID, isActive, aura)
   if not auraID or not aura then return end
   if not aura.soundEnabled or aura.soundEnabled ~= 1 then return end
@@ -52,16 +57,22 @@ function Sound.HandleStateChange(auraID, isActive, aura)
   if prev == nil then return end
   if prev == st.active then return end
 
-  local isCooldown = aura.type == "Cooldown"
+  -- Types that hide the Invert checkbox in the editor: their saved
+  -- aura.invert may hold a stale value the user cannot see or clear,
+  -- so it must not gate the trigger. These always fire on icon
+  -- appearance (gain edge) and never on icon disappearance.
+  local noInvert = aura.type == "Cooldown"
+                or aura.type == "Enchant"
+                or aura.type == "Distance"
   local isInvert = aura.invert == 1
   if not prev and st.active then
     -- gain edge: the icon just appeared
-    if isCooldown or not isInvert then
+    if noInvert or not isInvert then
       Sound.Play(aura.sound)
     end
   elseif prev and not st.active then
     -- loss edge: the icon just disappeared
-    if not isCooldown and isInvert then
+    if not noInvert and isInvert then
       Sound.Play(aura.sound)
     end
   end

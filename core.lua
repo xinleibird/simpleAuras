@@ -573,7 +573,7 @@ function sA:UpdateAuras()
         
         shouldShow = (show == 1)
 
-        -- Sound edge trigger (invert for most types, icon appearance for Cooldown)
+        -- Sound edge trigger (invert for Buff/Debuff, icon appearance for types without Invert)
         if sA.Sound and soundState ~= nil then
           sA.Sound.HandleStateChange(id, soundState, aura)
         end
