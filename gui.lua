@@ -772,7 +772,7 @@ function sA:EditAura(id)
 
     -- Sound row (label + dropdown + Sound checkbox)
     ed.soundLabel = ed:CreateFontString(nil, "OVERLAY", "GameFontNormal")
-    ed.soundLabel:SetPoint("TOPLEFT", ed.glow, "BOTTOMLEFT", 0, -15)
+    ed.soundLabel:SetPoint("TOPLEFT", ed.scaleLabel, "BOTTOMLEFT", 0, -15)
     ed.soundLabel:SetText("Sound:")
 
     ed.soundButton = CreateFrame("Button", nil, ed)
@@ -857,7 +857,7 @@ function sA:EditAura(id)
     local linetwo = ed:CreateTexture(nil, "OVERLAY")
     linetwo:SetTexture("Interface\\Buttons\\WHITE8x8")
     linetwo:SetVertexColor(1, 0.8, 0.06, 1)
-    linetwo:SetPoint("TOPLEFT", ed.duration, "BOTTOMLEFT", 0, -15)
+    linetwo:SetPoint("TOPLEFT", ed.soundLabel, "BOTTOMLEFT", 0, -15)
     linetwo:SetWidth(275)
     linetwo:SetHeight(1)
 
