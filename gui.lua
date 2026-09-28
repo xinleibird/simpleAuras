@@ -772,7 +772,7 @@ function sA:EditAura(id)
 
     -- Sound row (label + dropdown + Sound checkbox)
     ed.soundLabel = ed:CreateFontString(nil, "OVERLAY", "GameFontNormal")
-    ed.soundLabel:SetPoint("TOPLEFT", ed.scaleLabel, "BOTTOMLEFT", 0, -15)
+    ed.soundLabel:SetPoint("TOPLEFT", ed.duration, "BOTTOMLEFT", 0, -15)
     ed.soundLabel:SetText("Sound:")
 
     ed.soundButton = CreateFrame("Button", nil, ed)
