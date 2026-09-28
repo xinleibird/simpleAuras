@@ -495,6 +495,17 @@ function sA:UpdateAuras()
             -- only when aura.duration / aura.stacks is enabled (existing gates).
             local slotID = (aura.enchantSlot == "OffHand") and 17 or 16
             local tex = GetInventoryItemTexture and GetInventoryItemTexture("player", slotID)
+            -- Weapon-swap detection: a texture change between two non-nil
+            -- samples counts as a swap. First observation (lastWeaponTex
+            -- == nil) is the initial seed and must NOT fire sound on login
+            -- even if the new weapon has no enchant. Stored in a non-
+            -- SavedVariables table so a relog with a different equipped
+            -- weapon does not retroactively count as a swap.
+            sA._enchantLastTex = sA._enchantLastTex or {}
+            sA._enchantLastTex[slotID] = sA._enchantLastTex[slotID] or {}
+            local lastWeaponTex = sA._enchantLastTex[slotID][id]
+            local weaponSwitched = (lastWeaponTex ~= nil) and (lastWeaponTex ~= tex)
+            sA._enchantLastTex[slotID][id] = tex
             if tex then
               local hasEnchant, remMS, charges
               if sA.SuperWoW and GetEquippedItem then
@@ -531,6 +542,15 @@ function sA:UpdateAuras()
                 or (aura.enchantAlertLowCharges == 1 and present and charges   ~= nil and charges   <= (aura.enchantLowCharges or 0))
               show = alert and 1 or 0
               soundState = alert and true or false
+              -- Forced Missing sound on weapon swap. Covers the
+              -- "no enchant -> no enchant" swap (alert stays true->true,
+              -- so the normal gain edge never fires) and also reminds on
+              -- swaps from enchanted to non-enchanted when the user only
+              -- has the "consume last charge" edge in mind. Swapping to
+              -- an enchanted weapon is silent (present == true).
+              if weaponSwitched and not present and aura.enchantAlertMissing == 1 then
+                if sA.Sound then sA.Sound.PlayEnchantMiss(aura) end
+              end
             else
               -- No weapon in slot: nothing to alert about.
               show = 0

@@ -77,3 +77,15 @@ function Sound.HandleStateChange(auraID, isActive, aura)
     end
   end
 end
+
+-- Forced one-shot play for the Enchant "Missing" trigger. Bypasses
+-- the per-aura edge state because the "no enchant -> no enchant"
+-- weapon-swap case would never produce a state transition there.
+-- Caller is responsible for any guard conditions (weapon present,
+-- enchant actually missing, etc.).
+function Sound.PlayEnchantMiss(aura)
+  if not aura then return end
+  if not aura.soundEnabled or aura.soundEnabled ~= 1 then return end
+  if not aura.sound or aura.sound == "" then return end
+  Sound.Play(aura.sound)
+end

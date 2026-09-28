@@ -113,7 +113,7 @@ Distance:
 
 Enchant:
 - Monitors the temporary weapon enchant on the **MainHand** or **OffHand** slot. Icon shows when any checked alert fires (OR logic):
-  - **Missing** — the selected slot currently has no temporary enchant.
+  - **Missing** — the selected slot currently has no temporary enchant. Also plays its sound when you swap to another weapon that also has no temporary enchant (covers the "no enchant → no enchant" swap case, which would otherwise not register as an edge).
   - **Low Time** — enchant exists and remaining time is `<=` Low Time (default 180 sec, i.e. 3 minutes).
   - **Low Charges** — enchant exists and remaining charges are `<=` Low Charges (default 20).
 - Icon uses the weapon's own texture (`GetInventoryItemTexture`), so it stays the same regardless of enchant presence.
