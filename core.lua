@@ -554,19 +554,26 @@ function sA:UpdateAuras()
               if aura.type == "Cooldown" then
                 local onCooldown = duration and duration > 0
                 show = (((aura.showCD == "No CD" or aura.showCD == "Always") and not onCooldown) or ((aura.showCD == "CD" or aura.showCD == "Always") and onCooldown)) and 1 or 0
-              elseif aura.invert == 1 then
-                show = 1 - auraIsPresent
+                -- Cooldown has no invert option in the editor, so tie the
+                -- sound edge to the icon's own visibility: a CD state flip
+                -- that makes the icon appear/disappear. showCD="Always" keeps
+                -- show at 1 permanently -> no edge -> no sound.
+                soundState = (show == 1)
               else
-                show = auraIsPresent
+                if aura.invert == 1 then
+                  show = 1 - auraIsPresent
+                else
+                  show = auraIsPresent
+                end
+                soundState = (auraIsPresent == 1)
               end
-              soundState = (auraIsPresent == 1)
             end
           end
         end
         
         shouldShow = (show == 1)
 
-        -- Sound edge trigger (driven by aura.invert)
+        -- Sound edge trigger (invert for most types, icon appearance for Cooldown)
         if sA.Sound and soundState ~= nil then
           sA.Sound.HandleStateChange(id, soundState, aura)
         end
