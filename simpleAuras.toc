@@ -6,5 +6,6 @@
 ## SavedVariablesPerCharacter: simpleAuras
 init.lua
 Glow.lua
+Sound.lua
 core.lua
 gui.lua

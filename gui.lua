@@ -417,6 +417,9 @@ function sA:SaveAura(id)
     data.enchantLowCharges    = tonumber(ed.enchantLowCharges:GetText()) or 20
   end
 
+  data.sound         = (ed.soundButton.text:GetText() == "(None)") and "" or ed.soundButton.text:GetText()
+  data.soundEnabled  = ed.soundOn.value
+
   ed.name:ClearFocus()
   ed.texturePath:ClearFocus()
   ed.scale:ClearFocus()
@@ -440,7 +443,7 @@ function sA:AddAura(copyId)
   if copyId and simpleAuras.auras[copyId] then
     simpleAuras.auras[newId] = deepCopy(simpleAuras.auras[copyId])
   else
-    simpleAuras.auras[newId] = {["enabled"]=1,["myCast"]=1,["name"]="",["spellID"]=0,["auracolor"]={[1]=1,[2]=1,[3]=1,[4]=1},["autodetect"]=0,["texture"]="Interface\\Icons\\INV_Misc_QuestionMark",["scale"]=1,["xpos"]=0,["ypos"]=0,["duration"]=0,["stacks"]=0,["glow"]=0,["type"]="Buff",["unit"]="Player",["showCD"]="Always",["showDistance"]="Any",["distanceCondition"]="Any",["lowduration"]=0,["lowdurationcolor"]={[1]=1,[2]=0,[3]=0,[4]=1},["lowdurationvalue"]=5,["inCombat"]=1,["outCombat"]=1,["inParty"]=0,["inRaid"]=0,["invert"]=0,["dual"]=0,["targetHelp"]=0,["targetHarm"]=0,["targetSelf"]=0,["targetAlive"]=0,["targetDead"]=0,["enchantSlot"]="MainHand",["enchantAlertMissing"]=0,["enchantAlertLowTime"]=0,["enchantLowTime"]=180,["enchantAlertLowCharges"]=0,["enchantLowCharges"]=20}
+    simpleAuras.auras[newId] = {["enabled"]=1,["myCast"]=1,["name"]="",["spellID"]=0,["auracolor"]={[1]=1,[2]=1,[3]=1,[4]=1},["autodetect"]=0,["texture"]="Interface\\Icons\\INV_Misc_QuestionMark",["scale"]=1,["xpos"]=0,["ypos"]=0,["duration"]=0,["stacks"]=0,["glow"]=0,["type"]="Buff",["unit"]="Player",["showCD"]="Always",["showDistance"]="Any",["distanceCondition"]="Any",["lowduration"]=0,["lowdurationcolor"]={[1]=1,[2]=0,[3]=0,[4]=1},["lowdurationvalue"]=5,["inCombat"]=1,["outCombat"]=1,["inParty"]=0,["inRaid"]=0,["invert"]=0,["dual"]=0,["targetHelp"]=0,["targetHarm"]=0,["targetSelf"]=0,["targetAlive"]=0,["targetDead"]=0,["enchantSlot"]="MainHand",["enchantAlertMissing"]=0,["enchantAlertLowTime"]=0,["enchantLowTime"]=180,["enchantAlertLowCharges"]=0,["enchantLowCharges"]=20,["sound"]="",["soundEnabled"]=0}
   end
   if gui.editor and gui.editor:IsShown() then
     gui.editor:Hide()
@@ -470,7 +473,7 @@ function sA:EditAura(id)
   if not ed then
     ed = CreateFrame("Frame", "sAEdit", gui)
     ed:SetWidth(300)
-    ed:SetHeight(520)
+    ed:SetHeight(555)
     ed:SetPoint("LEFT", gui, "RIGHT", 10, 0)
     sA:SkinFrame(ed)
     ed:SetMovable(true)
@@ -766,6 +769,89 @@ function sA:EditAura(id)
     ed.glowLabel = ed:CreateFontString(nil, "OVERLAY", "GameFontNormal")
     ed.glowLabel:SetPoint("LEFT", ed.glow, "RIGHT", 5, 0)
     ed.glowLabel:SetText("Glow")
+
+    -- Sound row (label + dropdown + Sound checkbox)
+    ed.soundLabel = ed:CreateFontString(nil, "OVERLAY", "GameFontNormal")
+    ed.soundLabel:SetPoint("TOPLEFT", ed.glow, "BOTTOMLEFT", 0, -15)
+    ed.soundLabel:SetText("Sound:")
+
+    ed.soundButton = CreateFrame("Button", nil, ed)
+    ed.soundButton:SetWidth(140)
+    ed.soundButton:SetHeight(20)
+    ed.soundButton:SetPoint("LEFT", ed.soundLabel, "RIGHT", 5, 0)
+    sA:SkinFrame(ed.soundButton, {0.2,0.2,0.2,1})
+    ed.soundButton.text = ed.soundButton:CreateFontString(nil, "OVERLAY", "GameFontNormal")
+    ed.soundButton.text:SetPoint("CENTER", ed.soundButton, "CENTER", 0, 0)
+    ed.soundButton:SetScript("OnEnter", function() ed.soundButton:SetBackdropColor(0.5,0.5,0.5,1) end)
+    ed.soundButton:SetScript("OnLeave", function() ed.soundButton:SetBackdropColor(0.2,0.2,0.2,1) end)
+    ed.soundButton:SetScript("OnClick", function()
+      if not ed.soundButton.menu then
+        local menu = CreateFrame("Frame", nil, ed)
+        menu:SetPoint("TOPLEFT", ed.soundButton, "BOTTOMLEFT", 0, -2)
+        menu:SetFrameStrata("DIALOG")
+        menu:SetFrameLevel(10)
+        menu:SetWidth(140)
+        menu:SetHeight(340)
+        sA:SkinFrame(menu, {0.15,0.15,0.15,1})
+        menu:Hide()
+        ed.soundButton.menu = menu
+        local SOUND_OPTIONS = {
+          "",
+          "MPOWA - Cat.ogg",
+          "MPOWA - Heartbeat.ogg",
+          "MPOWA - Hit (1).ogg", "MPOWA - Hit (2).ogg", "MPOWA - Hit (3).ogg", "MPOWA - Hit (4).ogg",
+          "MPOWA - Hit (5).ogg", "MPOWA - Hit (6).ogg", "MPOWA - Hit (7).ogg", "MPOWA - Hit (8).ogg",
+          "MPOWA - Panther.ogg",
+          "MPOWA - Sonar.ogg",
+          "MPOWA - Swordecho.ogg",
+          "MPOWA - Wolf.ogg",
+        }
+        local function makeSoundChoice(label, index)
+          local b = CreateFrame("Button", nil, menu)
+          b:SetWidth(140)
+          b:SetHeight(20)
+          b:SetPoint("TOPLEFT", menu, "TOPLEFT", 0, -((index - 1) * 20))
+          sA:SkinFrame(b, {0.2,0.2,0.2,1})
+          b.text = b:CreateFontString(nil, "OVERLAY", "GameFontWhite")
+          b.text:SetPoint("LEFT", b, "LEFT", 6, 0)
+          b.text:SetText((label == "") and "(None)" or label)
+          b:SetScript("OnEnter", function() b:SetBackdropColor(0.5,0.5,0.5,1) end)
+          b:SetScript("OnLeave", function() b:SetBackdropColor(0.2,0.2,0.2,1) end)
+          b:SetScript("OnClick", function()
+            ed.soundButton.text:SetText((label == "") and "(None)" or label)
+            menu:Hide()
+            sA:SaveAura(id)
+            if sA.Sound then sA.Sound.Play(label) end
+          end)
+        end
+        for i, opt in ipairs(SOUND_OPTIONS) do makeSoundChoice(opt, i) end
+      end
+      local menu = ed.soundButton.menu
+      if menu:IsVisible() then menu:Hide() else menu:Show() end
+    end)
+
+    ed.soundOn = CreateFrame("Button", nil, ed)
+    ed.soundOn:SetWidth(16)
+    ed.soundOn:SetHeight(16)
+    ed.soundOn:SetPoint("LEFT", ed.soundButton, "RIGHT", 10, 0)
+    sA:SkinFrame(ed.soundOn, {0.15,0.15,0.15,1})
+    ed.soundOn:SetScript("OnEnter", function() ed.soundOn:SetBackdropColor(0.5,0.5,0.5,1) end)
+    ed.soundOn:SetScript("OnLeave", function() ed.soundOn:SetBackdropColor(0.15,0.15,0.15,1) end)
+    ed.soundOn.checked = ed.soundOn:CreateTexture(nil, "OVERLAY")
+    ed.soundOn.checked:SetTexture("Interface\\Buttons\\WHITE8x8")
+    ed.soundOn.checked:SetVertexColor(1,0.8,0.06,1)
+    ed.soundOn.checked:SetPoint("CENTER", ed.soundOn, "CENTER", 0, 0)
+    ed.soundOn.checked:SetWidth(7)
+    ed.soundOn.checked:SetHeight(7)
+    ed.soundOn.value = 0
+    ed.soundOn:SetScript("OnClick", function(self)
+      ed.soundOn.value = 1 - (ed.soundOn.value or 0)
+      if ed.soundOn.value == 1 then ed.soundOn.checked:Show() else ed.soundOn.checked:Hide() end
+      sA:SaveAura(id)
+    end)
+    ed.soundOnLabel = ed:CreateFontString(nil, "OVERLAY", "GameFontNormal")
+    ed.soundOnLabel:SetPoint("LEFT", ed.soundOn, "RIGHT", 5, 0)
+    ed.soundOnLabel:SetText("Sound")
 
     -- Conditions (unit / type)
     local linetwo = ed:CreateTexture(nil, "OVERLAY")
@@ -1527,6 +1613,10 @@ function sA:EditAura(id)
 
   ed.glow.value = aura.glow or 0
   if ed.glow.value == 1 then ed.glow.checked:Show() else ed.glow.checked:Hide() end
+
+  ed.soundButton.text:SetText((aura.sound and aura.sound ~= "") and aura.sound or "(None)")
+  ed.soundOn.value = aura.soundEnabled or 0
+  if ed.soundOn.value == 1 then ed.soundOn.checked:Show() else ed.soundOn.checked:Hide() end
 
   ed.lowduration.value = aura.lowduration or 0
   if ed.lowduration.value == 1 then ed.lowduration.checked:Show() else ed.lowduration.checked:Hide() end

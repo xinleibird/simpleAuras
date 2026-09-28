@@ -463,6 +463,7 @@ function sA:UpdateAuras()
       if aura.dual == 1 and aura.type ~= "Cooldown" and aura.type ~= "Distance" and aura.type ~= "Enchant" then self.dualframes[id] = dualframe end
       
       local isEnabled = (aura.enabled == nil or aura.enabled == 1)
+      local soundState = nil  -- true/false; per-type "aura is active" for Sound edge detection
       local shouldShow
 
       if gui and gui:IsVisible() then
@@ -485,6 +486,7 @@ function sA:UpdateAuras()
                 aura.showDistance or aura.distanceCondition,
                 aura.name, aura.spellID)
               show = passes and 1 or 0
+              soundState = passes
             end
           elseif aura.type == "Enchant" then
             -- Enchant type: alert when weapon enchant is missing OR low on
@@ -528,9 +530,11 @@ function sA:UpdateAuras()
                 or (aura.enchantAlertLowTime    == 1 and present and remMS    ~= nil and remMS    <= (aura.enchantLowTime     or 0) * 1000)
                 or (aura.enchantAlertLowCharges == 1 and present and charges   ~= nil and charges   <= (aura.enchantLowCharges or 0))
               show = alert and 1 or 0
+              soundState = alert and true or false
             else
               -- No weapon in slot: nothing to alert about.
               show = 0
+              soundState = false
             end
           else
             -- Check for target existence if required by the aura
@@ -555,12 +559,18 @@ function sA:UpdateAuras()
               else
                 show = auraIsPresent
               end
+              soundState = (auraIsPresent == 1)
             end
           end
         end
         
         shouldShow = (show == 1)
-		
+
+        -- Sound edge trigger (driven by aura.invert)
+        if sA.Sound and soundState ~= nil then
+          sA.Sound.HandleStateChange(id, soundState, aura)
+        end
+
       end
       
       -- This handles hiding the aura if the editor for it is open

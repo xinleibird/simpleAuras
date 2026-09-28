@@ -75,6 +75,10 @@ Icon/Texture:
 - x/y pos: Position from center of the screen.
 - Show Duration*/Stacks: Shows Duration in the center of the icon/texture, stacks are under that.
 - Glow: Shows a glowing border with an animated ants line around the icon while the aura is visible. The animation runs at 0.04 s per frame (~0.88 s per cycle) independently of the refresh rate.
+- Sound: Plays a short .ogg when the aura's icon appears. Pick a file from the dropdown, check the "Sound" checkbox to enable. The trigger depends on the *Invert* field:
+  - **Invert unchecked** -> plays when the aura is **gained** (icon appears because the aura is now present).
+  - **Invert checked**   -> plays when the aura is **lost** (icon appears because the aura just disappeared).
+  Picking a different file in the dropdown previews it immediately. The first observation per aura (login / ReloadUI) is suppressed, so no sound spam on startup. The dropdown lists 15 files bundled under `Sounds/`; user-supplied sounds are not supported. Files: cat, heartbeat, hit (1-8), panther, sonar, swordecho, wolf.
 
 
 Conditions:
